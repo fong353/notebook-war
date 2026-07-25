@@ -332,7 +332,7 @@ const WPN = {
   fighterGun:{name:['Wing Guns','机翼武器'],  m:[['MG151/20','MG151/20'],['6× M2 .50 cal','6×M2 .50'],['ShVAK 20mm','ShVAK 20mm']],                  proj:'bullet', dmg:16, rng:140, rof:.50, hits:'ga', vs:[.7,1],    acc:.66, supp:.28, ammo:36, burst:2 },
   attackGun:{ name:['Strafing Guns','扫射机炮'],m:[['MG17 + 37mm','MG17 + 37mm'],['8× M2 .50 cal','8×M2 .50'],['VYa-23','VYa-23']],                  proj:'bullet', dmg:28, rng:130, rof:.34, hits:'g',  vs:[1.5,1.1], acc:.62, supp:.66, ammo:48, burst:2 },
   agRocket: { name:['Air Rockets','对地火箭'],m:[['Wfr.Gr.21','Wfr.Gr.21'],['HVAR 5in','HVAR 5 吋'],['RS-82','RS-82']],                              proj:'rocket', dmg:22, rng:170, rof:2.2, hits:'g',  vs:[.9,1.2],  splash:30, supp:.4, burst:4, ammo:6 },
-  bombLoad: { name:['Bombs','航弹'],          m:[['SC 250','SC 250'],['M64 500lb','M64 500 磅'],['FAB-100','FAB-100']],                              proj:'drop',   dmg:56, rng:88,  rof:2.6, hits:'g',  vs:[1,1.2],   splash:70, supp:.7, burst:2, ammo:5 },
+  bombLoad: { name:['Bombs','航弹'],          m:[['SC 250','SC 250'],['M64 500lb','M64 500 磅'],['FAB-100','FAB-100']],                              proj:'drop',   dmg:56, rng:118,  rof:2.6, hits:'g',  vs:[1,1.2],   splash:70, supp:.7, burst:2, ammo:5 },
 };
 
 /* ══════════════════════════ UNIT TYPES ══════════════════════════
@@ -659,7 +659,10 @@ function pickWeapon(u, t, dist) {
     const W = w.d;
     if (w.cd > 0 || w.ammo <= 0) continue;
     if (W.hits.indexOf(t.d.layer) < 0) continue;
-    if (dist > W.rng || dist < W.minRng) continue;
+    /* 航弹是垂直丢下去的：射程只算水平投放距离。原来把飞行高度也算进
+       三维距离，175 的巡航高度直接吃掉了 154 的射程，轰炸机永远投不了弹 */
+    const dw = W.proj === 'drop' ? distG(u, t) : dist;
+    if (dw > W.rng || dw < W.minRng) continue;
     let eff = W.dmg * (t.d.armor ? W.vs[0] : W.vs[1]) * (W.burst || 1) / W.rof;
     if (!t.d.armor && W.vs[0] / W.vs[1] > 2) eff *= .45;   // 反装甲弹别去点步兵
     if (W.splash) {                                        // 溅射弹按目标周围人堆加权
@@ -846,7 +849,8 @@ function update(dt) {
         if (u.wx < -160 || u.wx > WORLD_W + 160) { u.hp = 0; u.silent = 1; u.noloss = 1; }
       } else {
         const dist = t ? dist3(u, t) : 1e18;
-        const wantAlt = (t && t.d.layer === 'a') ? t.alt : u.d.alt;
+        /* 咬地面目标就压下去飞：既进得了射程，也才像在俯冲 */
+        const wantAlt = !t ? u.d.alt : (t.d.layer === 'a' ? t.alt : u.d.alt * .5);
         if (u.d.wing === 'rotor') {
           /* ── 旋翼：可以悬停，可以倒着退，稳稳吊在射程上打 ── */
           if (t) {
@@ -1089,7 +1093,7 @@ function update(dt) {
 /* ══════════════════════════ 开火与命中 ══════════════════════════ */
 function fire(u, t, wp) {
   const W = wp.d, n = W.burst || 1;
-  const d = dist3(u, t);
+  const d = W.proj === 'drop' ? distG(u, t) : dist3(u, t);
   for (let i = 0; i < n; i++) shoot(u, t, i * (W.proj === 'rocket' ? .16 : .09), d, W);
   u.flash = 1; u.fk = W.proj;
   beep(W.proj === 'bullet' || W.proj === 'flak' ? 'shot' : 'pew');
