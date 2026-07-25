@@ -1307,7 +1307,8 @@ const CMDS = [
   { id:'rally',   name:['Rally','鼓舞'],     tip:['Clears suppression, +speed and rate of fire for 7s','解除压制，全员提速抢攻 7 秒'],           cd:30, aim:1 },
   { id:'smoke',   name:['Smoke','烟雾'],     tip:['Lays smoke; enemy accuracy into it drops hard','放一片烟，敌军打这片命中大降'],               cd:18, aim:1 },
   { id:'airdrop', name:['Airdrop','空降'],   tip:['Transport drops a paratrooper stick (they fight once landed)','运输机掠过，投下一队伞兵（落地才能开火）'], cd:34, aim:1 },
-  { id:'spect',   name:['Set-piece','奇观'],  tip:['Call in whatever outsized thing qualifies right now — each one has its own precondition, so sometimes nothing comes','把眼下够条件的那个大家伙叫出来。每样奇观都有自己的前置条件，所以有时候什么也叫不动'], cd:85, aim:0 },
+  { id:'spectF',  name:['Set-piece','奇观部队'], tip:['Bring on an outsized formation — it joins the battle and fights on like anything else','把一支超规格的部队拉上来。它加入战场之后就跟别的单位一样接着打'], cd:85, aim:0 },
+  { id:'spectA',  name:['Set-play','奇观行动'],  tip:['Stage a one-off action — a charge, a barrage, a rocket. It happens once and it is over','来一次一次性的动作：一场冲锋、一轮弹幕、一发火箭。发生过就结束了'], cd:85, aim:0 },
 ];
 const cmdCd = {};
 CMDS.forEach(c => cmdCd[c.id] = 0);
@@ -1363,7 +1364,8 @@ function execCmd(id, wx, wz) {
                     r0: rnd(52, 76) * K, r: 30, t: 0, life: 13, sd: (Math.random() * 1e6) | 0 });
     pushLog(sideName(side) + T('lgSmoke'));
   }
-  if (id === 'spect' && !runSpectacle(side)) pushLog(sideName(side) + T('lgNoSpect'));
+  if ((id === 'spectF' || id === 'spectA') &&
+      !runSpectacle(side, id === 'spectF' ? 'force' : 'act')) pushLog(sideName(side) + T('lgNoSpect'));
   cmdCd[id] = CMDS.find(c => c.id === id).cd;
 }
 
@@ -1390,13 +1392,14 @@ function skyFall(side, wx, wz, dmg, splash, dur, alt) {
     sd: (Math.random() * 1e6) | 0, miss: 0, dur, arc: 0, trail: [],
   });
 }
-function runSpectacle(forceSide) {
+function runSpectacle(forceSide, kind) {
   const ok = e => (e.nat < 0 || e.nat === match[0] || e.nat === match[1]);
   /* 不属于任何一方的奇观两边都可能发动，前置条件得逐边验 —— 否则会出现
      "拿甲方的战况判定、却给乙方发动"。forceSide 是玩家点了奇观按钮时用的 */
   const pool = [];
   for (const e of SPECTACLE) {
     if (!ok(e)) continue;
+    if (kind && e.kind !== kind) continue;
     let sides = e.nat < 0 ? [0, 1] : [e.nat === match[0] ? 0 : 1];
     if (forceSide !== undefined) sides = sides.filter(sd => sd === forceSide);
     for (const sd of sides) if (!e.when || e.when(sd))
@@ -1410,23 +1413,23 @@ function runSpectacle(forceSide) {
 }
 
 const SPECTACLE = [
-  { nat: 0, name: ['V-2 rocket', 'V-2 火箭'], go(side) {
+  { nat: 0, name: ['V-2 rocket', 'V-2 火箭'], kind:'act', go(side) {
       /* Supersonic — no warning, nothing can intercept it. It simply arrives. */
       skyFall(side, farSide(side), rnd(.1, .9), 320, 200, 1.4, 900);
     } },
-  { nat: 0, name: ['V-1 flying bomb', 'V-1 飞弹'], go(side) {
+  { nat: 0, name: ['V-1 flying bomb', 'V-1 飞弹'], kind:'act', go(side) {
       /* Slow and low, unlike the V-2 — flak actually gets a shot at this one */
       for (let i = 0; i < 2; i++) {
         const u = spawn(side, 'v1', side === 0 ? -30 - i * 70 : WORLD_W + 30 + i * 70, rnd(.2, .8));
         u.alt = 150;
       }
     } },
-  { nat: 0, name: ["Wittmann's Tiger", '魏特曼的虎式'], go(side) {
+  { nat: 0, name: ["Wittmann's Tiger", '魏特曼的虎式'], kind:'force', go(side) {
       /* One tank, named, with a crew that knows what it's doing */
       const u = spawn(side, 'tank', side === 0 ? -30 : WORLD_W + 30, rnd(.3, .7));
       u.rank = 2; u.max = Math.round(u.max * 2.3); u.hp = u.max; u.ace = 1;
     } },
-  { nat: 1, name: ['Market Garden', '市场花园'], go(side) {
+  { nat: 1, name: ['Market Garden', '市场花园'], kind:'force', go(side) {
       /* A division's worth of canopies over the enemy's back yard */
       const c = enemyCentre(side);
       for (let i = 0; i < 12; i++) {
@@ -1434,13 +1437,13 @@ const SPECTACLE = [
         u.alt = 270 + i * 16; u.dropping = 1;
       }
     } },
-  { nat: 1, name: ['Thousand-bomber raid', '千机大轰炸'], go(side) {
+  { nat: 1, name: ['Thousand-bomber raid', '千机大轰炸'], kind:'force', go(side) {
       for (let i = 0; i < 8; i++) {
         const u = spawn(side, 'bmb', side === 0 ? -40 - i * 46 : WORLD_W + 40 + i * 46, .1 + i * .105);
         u.rank = 1;
       }
     } },
-  { nat: 2, name: ['Pakfront', '反坦克炮阵'], go(side) {
+  { nat: 2, name: ['Pakfront', '反坦克炮阵'], kind:'force', go(side) {
       /* A line of guns dug in where the armour has to come through */
       const wz = rnd(.22, .78);
       for (let i = 0; i < 5; i++) {
@@ -1449,13 +1452,13 @@ const SPECTACLE = [
         u.rank = 1;
       }
     } },
-  { nat: 1, name: ['B-17 formation', 'B-17 编队'], go(side) {
+  { nat: 1, name: ['B-17 formation', 'B-17 编队'], kind:'force', go(side) {
       for (let i = 0; i < 4; i++) {
         const u = spawn(side, 'bmb', side === 0 ? -40 - i * 55 : WORLD_W + 40 + i * 55, .25 + i * .17);
         u.rank = 1;
       }
     } },
-  { nat: 2, name: ['Katyusha battalion', '喀秋莎全营齐射'], go(side) {
+  { nat: 2, name: ['Katyusha battalion', '喀秋莎全营齐射'], kind:'act', go(side) {
       const c = enemyCentre(side);
       for (let i = 0; i < 26; i++)
         ordnance(side, c[0] + rnd(-140, 140), c[1] + rnd(-140, 140) / DEPTH, rnd(0, 2.2), 30, 44, .6);

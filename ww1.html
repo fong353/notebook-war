@@ -1358,7 +1358,8 @@ const CMDS = [
   { id:'smoke',   name:['Gas','毒气'],       tip:['A drifting gas cloud: keeps hurting and pinning anyone caught in it','飘散的毒气云：持续伤害并压制云里的一切'], cd:22, aim:1 },
   { id:'mine',    name:['Mine','坑道爆破'], tip:['Sappers have been digging for weeks. Fires after a delay, and leaves a hole in the map','工兵挖了几周的坑道，延迟起爆，地图上会留个大坑'], cd:70, aim:1 },
   { id:'airdrop', name:['Raid','突击队'],    tip:['A raiding party goes over the top into the target trench','一队突击兵越出战壕，摸进指定阵地'], cd:34, aim:1 },
-  { id:'spect',   name:['Set-piece','奇观'],  tip:['Call in whatever outsized thing qualifies right now — each one has its own precondition, so sometimes nothing comes','把眼下够条件的那个大家伙叫出来。每样奇观都有自己的前置条件，所以有时候什么也叫不动'], cd:85, aim:0 },
+  { id:'spectF',  name:['Set-piece','奇观部队'], tip:['Bring on an outsized formation — it joins the battle and fights on like anything else','把一支超规格的部队拉上来。它加入战场之后就跟别的单位一样接着打'], cd:85, aim:0 },
+  { id:'spectA',  name:['Set-play','奇观行动'],  tip:['Stage a one-off action — a charge, a barrage, a rocket. It happens once and it is over','来一次一次性的动作：一场冲锋、一轮弹幕、一发火箭。发生过就结束了'], cd:85, aim:0 },
 ];
 const cmdCd = {};
 CMDS.forEach(c => cmdCd[c.id] = 0);
@@ -1428,9 +1429,9 @@ function execCmd(id, wx, wz) {
                     r0: rnd(56, 82) * K, r: 30, t: 0, life: 16, gas: 1, side,
                     sd: (Math.random() * 1e6) | 0 });
     pushLog(sideName(side) + T('lgSmoke'));
-  } else if (id === 'spect') {
+  } else if (id === 'spectF' || id === 'spectA') {
     /* 奇观各有前置条件，凑不齐就是叫不动 —— 冷却照走，跟别的指令一个规矩 */
-    if (!runSpectacle(side)) pushLog(sideName(side) + T('lgNoSpect'));
+    if (!runSpectacle(side, id === 'spectF' ? 'force' : 'act')) pushLog(sideName(side) + T('lgNoSpect'));
   }
   cmdCd[id] = CMDS.find(c => c.id === id).cd;
 }
@@ -1462,7 +1463,7 @@ function skyFall(side, wx, wz, dmg, splash, dur, alt) {
 /* 简易延迟：把回调挂进特效队列，跟着模拟时钟走（不用真实计时器） */
 const shells = [];
 function setTimeoutShell(delay, fn) { shells.push({ t: delay, fn }); }
-function runSpectacle(forceSide) {
+function runSpectacle(forceSide, kind) {
   /* nat < 0 = 不属于任何一方，随便挑一边发动；when 用来卡前置条件 */
   const ok = e => (e.nat < 0 || e.nat === match[0] || e.nat === match[1]);
   /* 不属于任何一方的奇观两边都可能发动，所以前置条件得逐边验 —— 否则会
@@ -1470,6 +1471,7 @@ function runSpectacle(forceSide) {
   const pool = [];
   for (const e of SPECTACLE) {
     if (!ok(e)) continue;
+    if (kind && e.kind !== kind) continue;
     let sides = e.nat < 0 ? [0, 1] : [e.nat === match[0] ? 0 : 1];
     if (forceSide !== undefined) sides = sides.filter(sd => sd === forceSide);
     for (const sd of sides) if (!e.when || e.when(sd))
@@ -1483,36 +1485,36 @@ function runSpectacle(forceSide) {
 }
 
 const SPECTACLE = [
-  { nat: 2, name: ['Zeppelin raid', '齐柏林夜袭'], go(side) {
+  { nat: 2, name: ['Zeppelin raid', '齐柏林夜袭'], kind:'force', go(side) {
       for (let i = 0; i < 2; i++) {
         const u = spawn(side, 'bmb', side === 0 ? -40 - i * 60 : WORLD_W + 40 + i * 60, rnd(.2, .8));
         u.rank = 1;
       }
     } },
-  { nat: 2, name: ['Paris Gun', '巴黎大炮'], go(side) {
+  { nat: 2, name: ['Paris Gun', '巴黎大炮'], kind:'act', go(side) {
       const wz = rnd(.12, .88);
       for (let i = 0; i < 3; i++)
         setTimeoutShell(i * .9, () => { const c = enemyCentre(side);
           skyFall(side, c[0] + rnd(-130, 130), c[1] + rnd(-100, 100) / DEPTH, 190, 150, 1.7, 820); });
     } },
-  { nat: 0, name: ['Railway gun barrage', '列车炮弹幕'], go(side) {
+  { nat: 0, name: ['Railway gun barrage', '列车炮弹幕'], kind:'act', go(side) {
       const c = enemyCentre(side);
       for (let i = 0; i < 7; i++)
         ordnance(side, c[0] + (i - 3) * 40 * K + rnd(-16, 16), c[1] + rnd(-90, 90) / DEPTH, .4 + i * .5, 110, 120, 1.1);
     } },
-  { nat: 2, name: ['Flying Circus', '飞行马戏团'], go(side) {
+  { nat: 2, name: ['Flying Circus', '飞行马戏团'], kind:'force', go(side) {
       /* Jasta 11 — the whole squadron, all aces */
       for (let i = 0; i < 4; i++) {
         const u = spawn(side, 'fig', side === 0 ? -40 - i * 50 : WORLD_W + 40 + i * 50, .22 + i * .16);
         u.rank = 2; u.circus = 1;
       }
     } },
-  { nat: 0, name: ['Cambrai wedge', '康布雷坦克楔'], go(side) {
+  { nat: 0, name: ['Cambrai wedge', '康布雷坦克楔'], kind:'force', go(side) {
       /* The first mass tank attack in history */
       for (let i = 0; i < 7; i++)
         spawn(side, 'tank', side === 0 ? -30 - i * 42 : WORLD_W + 30 + i * 42, .18 + i * .105);
     } },
-  { nat: 2, name: ['Stormtrooper push', '暴风突击'], go(side) {
+  { nat: 2, name: ['Stormtrooper push', '暴风突击'], kind:'force', go(side) {
       /* Spring 1918: the barrage walks, the assault squads follow it in */
       const c = enemyCentre(side), fwd = side === 0 ? 1 : -1;
       for (let step = 0; step < 5; step++)
@@ -1524,7 +1526,7 @@ const SPECTACLE = [
         u.boost = 14;
       }
     } },
-  { nat: 1, name: ['Balloon buster', '气球猎手'],
+  { nat: 1, name: ['Balloon buster', '气球猎手'], kind:'force',
     when: side => units.some(u => u.side !== side && u.hp > 0 && u.d.key === 'balloon'),
     go(side) {
       for (let i = 0; i < 2; i++) {
@@ -1532,12 +1534,12 @@ const SPECTACLE = [
         u.rank = 2;
       }
     } },
-  { nat: -1, name: ['Christmas truce', '圣诞休战'], go() {
+  { nat: -1, name: ['Christmas truce', '圣诞休战'], kind:'act', go() {
       /* Everyone stops shooting. Nothing else in the game does this. */
       truce = 15;
       for (const u of units) { u.sup = 0; u.prone = 0; }
     } },
-  { nat: 0, name: ['Over the top', '越顶冲锋'], go(side) {
+  { nat: 0, name: ['Over the top', '越顶冲锋'], kind:'act', go(side) {
       /* 索姆河，1916 年 7 月 1 日。七天炮击本该把铁丝网削平，于是命令
          是排成横队、以行进速度走过去，不许跑也不许散开。铁丝网还在。
          那一天英军伤亡 57,470 人 —— 陆军史上最黑的一天 */
@@ -1548,7 +1550,7 @@ const SPECTACLE = [
           u.overTop = 1;
         }
     } },
-  { nat: -1, name: ['Cavalry breakthrough', '骑兵突击'], w: 4,
+  { nat: -1, name: ['Cavalry breakthrough', '骑兵突击'], kind:'act', w: 4,
     /* 骑兵师在后方等了四年的那个缺口。敌人阵线真被打薄了才等得到，
        所以多数场次你根本见不到这一条 */
     when: side => {
@@ -1562,7 +1564,7 @@ const SPECTACLE = [
       for (let i = 0; i < 7; i++)
         spawn(side, 'cav', side === 0 ? -20 - i * 30 : WORLD_W + 20 + i * 30, .13 + i * .122);
     } },
-  { nat: 1, name: ['French 75 rafale', '法国 75 速射'], go(side) {
+  { nat: 1, name: ['French 75 rafale', '法国 75 速射'], kind:'act', go(side) {
       const c = enemyCentre(side);
       for (let i = 0; i < 16; i++)
         ordnance(side, c[0] + rnd(-110, 110), c[1] + rnd(-110, 110) / DEPTH, i * .18, 34, 46, .5);
