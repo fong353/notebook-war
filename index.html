@@ -13,6 +13,11 @@
     font-family:"HanziPen SC","Hanzipen SC","Chalkboard SE","Comic Sans MS","Bradley Hand","PingFang SC",cursive,sans-serif;
     color:var(--ink);overflow:hidden;display:flex;flex-direction:column;user-select:none;
   }
+  /* 整个界面装在 #rot 里，横屏模式把它连按钮一起转 90° —— 比
+     screen.orientation.lock 可靠（那个在 iOS Safari 根本没有） */
+  #rot{display:flex;flex-direction:column;flex:1 1 auto;width:100%;min-height:0}
+  body.ls #rot{position:fixed;top:0;left:0;transform-origin:0 0}
+  #ls{display:none}
   header{
     flex:0 0 auto;display:flex;align-items:center;gap:14px;
     padding:5px 14px;background:var(--paper);border-bottom:2px dashed #c9bfa6;
@@ -62,6 +67,7 @@
     .row button small{display:none}
     .score{font-size:12px;gap:7px} #bar{width:64px}
     #hint{font-size:11px;white-space:normal;max-width:88%;text-align:center}
+    #ls{display:inline-block}          /* 横屏切换只在小屏出现 */
   }
   /* 手机竖屏：控件让出画面高度 */
   @media (max-width:520px){
@@ -77,6 +83,8 @@
 </style>
 </head>
 <body>
+
+<div id="rot">
 
 <header>
   <h1>草稿纸大战 <span class="s">/ 斜着看的战场</span></h1>
@@ -108,9 +116,11 @@
     <div class="row"><button id="auto" class="on">自动平衡</button><button id="snd">音效</button></div>
   </div>
   <div class="grp col">
-    <div class="row"><button id="grid" class="on">网格</button></div>
+    <div class="row"><button id="grid" class="on">网格</button><button id="ls">横屏</button></div>
     <div class="row"><button id="clr">重来</button></div>
   </div>
+</div>
+
 </div>
 
 <script>
@@ -193,17 +203,32 @@ function unproj(sx, sy) {
 }
 
 function layout() {
-  const r = cv.getBoundingClientRect();
   DPR = Math.min(window.devicePixelRatio || 1, 2);
-  W = r.width; H = r.height;
+  /* 用布局尺寸而非 getBoundingClientRect：横屏模式下容器带 rotate(90deg)，
+     包围盒的宽高是反的，clientWidth/Height 不受 transform 影响 */
+  W = cv.clientWidth || 1; H = cv.clientHeight || 1;
   cv.width = W * DPR; cv.height = H * DPR;
   mainCtx.setTransform(DPR, 0, 0, DPR, 0, 0);
   HZ = H * .19; FAR_Y = HZ + 14; BOT = H * .97;
   XK = W / WORLD_W * 1.12;          // 近处略微超出画面，梯形两侧不至于空太多
-  SIZEK = W < 520 ? .72 : (W < 760 ? .92 : (W < 1100 ? 1.12 : 1.3));
+  /* 兵的大小看"能用多少地方"，横屏时高度矮，别只按宽度放大 */
+  const m = Math.min(W, H * 2.4);
+  SIZEK = m < 520 ? .72 : (m < 760 ? .92 : (m < 1100 ? 1.12 : 1.3));
   paper = null;
 }
-window.addEventListener('resize', layout);
+/* 横屏模式：把 #rot 转 90°，宽高互换（用实际像素而非 100vh/100vw，
+   免得踩 iOS Safari 工具栏导致的 vh 抖动） */
+function applyRot() {
+  const r = document.getElementById('rot'), on = document.body.classList.contains('ls');
+  if (on) {
+    r.style.width = window.innerHeight + 'px';
+    r.style.height = window.innerWidth + 'px';
+    r.style.transform = 'translate(' + window.innerWidth + 'px,0) rotate(90deg)';
+  } else { r.style.width = r.style.height = r.style.transform = ''; }
+  layout();
+}
+window.addEventListener('resize', applyRot);
+window.addEventListener('orientationchange', () => setTimeout(applyRot, 120));
 
 /* ══════════════════════ 编制表 ══════════════════════
    rng/spd/splash/hold 写"屏幕手感值"，启动时换算成世界单位
@@ -1101,7 +1126,9 @@ function loop(now) {
 /* ══════════════════════ 交互 ══════════════════════ */
 const hover = { on: 0, x: 0, y: 0 };
 let drawing = 0, lastPut = 0, lastX = -1e9, lastY = -1e9;
-const pos = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+/* offsetX/Y 已经是画布本地坐标，浏览器替我们做了 transform 逆变换，
+   横屏旋转下照样准；clientX 减 rect 在旋转后是错的 */
+const pos = e => [e.offsetX, e.offsetY];
 function put(x, y) {
   const now = performance.now();
   if (now - lastPut < 80 || Math.hypot(x - lastX, y - lastY) < 14) return;
@@ -1149,6 +1176,14 @@ $('spd').onclick = () => { speed = speed === 1 ? 2 : (speed === 2 ? 4 : 1); $('s
 $('auto').onclick = () => { autoRe = !autoRe; $('auto').classList.toggle('on', autoRe); };
 $('snd').onclick = () => { sound = !sound; $('snd').classList.toggle('on', sound); if (sound) beep('shot'); };
 $('grid').onclick = () => { showGrid = !showGrid; $('grid').classList.toggle('on', showGrid); paper = null; };
+$('ls').onclick = () => {
+  const on = !document.body.classList.contains('ls');
+  document.body.classList.toggle('ls', on);
+  $('ls').classList.toggle('on', on);
+  $('ls').textContent = on ? '竖屏' : '横屏';
+  try { localStorage.setItem('mg_ls', on ? '1' : '0'); } catch (e) { }
+  applyRot();
+};
 $('clr').onclick = () => {
   units = []; projs = []; fx = []; wrecks = []; lost = [0, 0]; over = false; tick = 0;
   hideBanner(); initArmies();
@@ -1168,7 +1203,14 @@ function showBanner(txt, col) {
 }
 const hideBanner = () => $('banner').style.display = 'none';
 
-layout();
+/* 记住上次的横竖屏选择 */
+try {
+  if (localStorage.getItem('mg_ls') === '1') {
+    document.body.classList.add('ls');
+    $('ls').classList.add('on'); $('ls').textContent = '竖屏';
+  }
+} catch (e) { }
+applyRot();
 initArmies();
 requestAnimationFrame(loop);
 setTimeout(() => { const h = $('hint'); h.style.transition = 'opacity 1s'; h.style.opacity = 0; }, 9000);
