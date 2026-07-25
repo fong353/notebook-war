@@ -5,7 +5,7 @@
 **English** · [中文](README.zh-CN.md)
 
 **[▶ Play it in your browser](https://fong353.github.io/notebook-war/)**
- · [1916](https://fong353.github.io/notebook-war/ww1.html)
+ · [1918](https://fong353.github.io/notebook-war/ww1.html)
  · [Cold War](https://fong353.github.io/notebook-war/cold-war.html)
  · [Galactic](https://fong353.github.io/notebook-war/starwars.html)
 
@@ -31,7 +31,7 @@ bombers that have to fly a real attack run instead of hovering over the target.
 
 A single HTML file. No build step, no dependencies, no network calls — open it and it runs.
 
-- **Four settings.** `ww1.html` is 1916 — British, French and German, and the one where the trench
+- **Four settings.** `ww1.html` is 1918 — British, French and German, and the one where the trench
   system finally matters: barbed wire that snags infantry while tanks flatten it, drifting gas that
   keeps hurting whoever is caught in it, a creeping barrage that walks forward a rank at a time,
   rhomboid Mark IVs, a Fokker triplane and a Zeppelin overhead.
@@ -51,7 +51,7 @@ A single HTML file. No build step, no dependencies, no network calls — open it
   hits; pinned infantry crawl for the nearest trench or bunker and stop advancing.
 - **Set-pieces arrive on their own.** Every minute or so something outsized turns up without you
   asking: a V-2 that simply lands with no warning and nothing that can intercept it, a V-1 slow
-  enough for the flak to get a shot at, a B-17 formation, a Katyusha battalion. 1916 gets its own —
+  enough for the flak to get a shot at, a B-17 formation, a Katyusha battalion. 1918 gets its own —
   Zeppelin raids, the Paris Gun, railway-gun barrages. Each belongs to one nation, so you only see
   it when that nation is in the match.
 - **Six commander orders** on cooldowns — air strike, barrage, reinforce, rally, smoke, airdrop —
@@ -74,7 +74,7 @@ it needs no server, no build step and makes no network calls.
 
 ![Cold War](docs/coldwar.png)
 
-![1916](docs/ww1.png)
+![1918](docs/ww1.png)
 
 ![Galactic](docs/galactic.png)
 

@@ -321,7 +321,7 @@ const WPN = {
   grenade:  { name:['Grenade','手榴弹'],      m:[['Mills Bomb','米尔斯手雷'],['F1 Grenade','F1 手雷'],['Stielhandgranate','长柄手榴弹']],                proj:'bomb',   dmg:16, rng:58,  rof:4.5, hits:'g',  vs:[.6,1.4],  splash:26, supp:.3 },
   hmg:      { name:['Machine Gun','重机枪'],  m:[['Vickers .303','维克斯 .303'],['Hotchkiss M1914','哈奇开斯 M1914'],['MG08','MG08']],                          proj:'bullet', dmg:4,  rng:135, rof:.55, hits:'ga', vs:[.3,1.25], acc:.52, supp:.2,  burst:3 },
   srifle:   { name:['Sniper Rifle','狙击枪'], m:[['SMLE w/ scope','SMLE 瞄准镜'],['Lebel w/ scope','勒贝尔瞄准镜'],['Gew.98 w/ scope','毛瑟瞄准镜']],       proj:'bullet', dmg:30, rng:265, rof:2.2, hits:'g',  vs:[.12,3],   acc:.93, supp:.05 },
-  atTube:   { name:['AT Launcher','反坦克筒'],m:[['AT Rifle','反坦克步枪'],['37mm Puteaux','37mm 皮托炮'],['Mauser T-Gewehr','毛瑟 T-Gewehr']],                proj:'rocket', dmg:52, rng:150, rof:3.0, hits:'g',  vs:[2.2,.5],  acc:.82, supp:.12, minRng:30 },
+  atTube:   { name:['AT Launcher','反坦克筒'],m:[['Captured T-Gewehr','缴获的 T-Gewehr'],['37mm Puteaux','37mm 皮托炮'],['Mauser T-Gewehr','毛瑟 T-Gewehr']],                proj:'rocket', dmg:52, rng:150, rof:3.0, hits:'g',  vs:[2.2,.5],  acc:.82, supp:.12, minRng:30 },
   tankGun:  { name:['Tank Gun','坦克炮'],     m:[['6-pdr Sponson Gun','6 磅侧炮'],['37mm Turret Gun','37mm 炮塔炮'],['57mm Nordenfelt','57mm 诺登飞炮']],                   proj:'shell',  dmg:25, rng:185, rof:1.3, hits:'g',  vs:[1.2,1],   acc:.80, supp:.28 },
   coax:     { name:['Coaxial MG','同轴机枪'], m:[['Hull Vickers','车体维克斯'],['Hotchkiss Coax','哈奇开斯同轴'],['Hull MG08','车体 MG08']],                                           proj:'bullet', dmg:4,  rng:112, rof:.45, hits:'ga', vs:[.25,1.3], acc:.60, supp:.18, burst:3 },
   htMg:     { name:['Vehicle MG','车载机枪'], m:[['Turret Vickers','炮塔维克斯'],['Turret Hotchkiss','炮塔哈奇开斯'],['Turret MG08','炮塔 MG08']],                      proj:'bullet', dmg:7,  rng:150, rof:.40, hits:'ga', vs:[.4,1.3],  acc:.58, supp:.24, burst:2 },
@@ -330,11 +330,11 @@ const WPN = {
   howitzer: { name:['Howitzer','榴弹炮'],     m:[['18-pdr Field Gun','18 磅野炮'],['Canon de 75','法国 75 野炮'],['15cm sFH 13','15cm sFH 13']],             proj:'bomb',   dmg:40, rng:400, rof:3.0, hits:'g',  vs:[1,1.2],   splash:56, supp:.55 },
   mlrsSalvo:{ name:['Rocket Salvo','火箭齐射'],m:[['Livens Salvo','李文斯齐射'],['Mortar Salvo','迫击炮齐射'],['Minenwerfer Salvo','重迫齐射']], proj:'rocket', dmg:24, rng:430, rof:6.0, hits:'g',  vs:[.8,1.4],  splash:44, supp:.45, burst:6 },
   /* Airborne: no guided weapons in WW2 — just guns and iron bombs */
-  fighterGun:{name:['Wing Guns','机翼武器'],  m:[['Twin Vickers','双联维克斯'],['Twin Vickers (SPAD)','双联维克斯'],['Twin Spandau','双联斯潘道']],                  proj:'bullet', dmg:16, rng:140, rof:.50, hits:'ga', vs:[.7,1],    acc:.66, supp:.28, ammo:36, burst:2 },
-  attackGun:{ name:['Strafing Guns','扫射机炮'],m:[['Lewis Strafe','刘易斯扫射'],['Strafing Run','低空扫射'],['Trench Strafe','堑壕扫射']],                  proj:'bullet', dmg:28, rng:130, rof:.34, hits:'g',  vs:[1.5,1.1], acc:.62, supp:.66, ammo:48, burst:2 },
-  agRocket: { name:['Air Rockets','对地火箭'],m:[['Cooper Bomb','库珀炸弹'],['Light Bomb','轻型炸弹'],['Air Grenade','空投手榴弹']],                              proj:'rocket', dmg:22, rng:170, rof:2.2, hits:'g',  vs:[.9,1.2],  splash:30, supp:.4, burst:4, ammo:6 },
+  fighterGun:{name:['Wing Guns','机翼武器'],  m:[['Twin Vickers','双联维克斯'],['Twin Vickers','双联维克斯'],['Twin Spandau','双联斯潘道']],                  proj:'bullet', dmg:16, rng:140, rof:.50, hits:'ga', vs:[.7,1],    acc:.66, supp:.28, ammo:36, burst:2 },
+  attackGun:{ name:['Strafing Guns','扫射机炮'],m:[['Vickers + Lewis','维克斯＋刘易斯'],['Vickers + Lewis','维克斯＋刘易斯'],['Twin Spandau','双联斯潘道']],                  proj:'bullet', dmg:28, rng:130, rof:.34, hits:'g',  vs:[1.5,1.1], acc:.62, supp:.66, ammo:48, burst:2 },
+  agRocket: { name:['Air Rockets','对地火箭'],m:[['Cooper Bomb','库珀炸弹'],['8kg Bombs','8 公斤炸弹'],['Air-dropped Grenades','空投手榴弹']],                              proj:'rocket', dmg:22, rng:170, rof:2.2, hits:'g',  vs:[.9,1.2],  splash:30, supp:.4, burst:4, ammo:6 },
   railGun:  { name:['Siege Shell','攻城炮弹'],  m:[['14in Railway Gun','14 吋列车炮'],['320mm Railway Gun','320mm 列车炮'],['42cm Big Bertha','42cm 大贝尔莎']], proj:'bomb', dmg:120, rng:640, rof:11.0, hits:'g', vs:[1.4,1.5], splash:120, supp:1.4 },
-  bombLoad: { name:['Bombs','航弹'],          m:[['112-lb Bomb','112 磅炸弹'],['Voisin Bomb','瓦赞炸弹'],['Zeppelin Bomb','飞艇炸弹']],                              proj:'drop',   dmg:56, rng:118,  rof:2.6, hits:'g',  vs:[1,1.2],   splash:70, supp:.7, burst:2, ammo:5 },
+  bombLoad: { name:['Bombs','航弹'],          m:[['112-lb Bomb','112 磅炸弹'],['60kg Bombs','60 公斤炸弹'],['100kg Bombs','100 公斤炸弹']],                              proj:'drop',   dmg:56, rng:118,  rof:2.6, hits:'g',  vs:[1,1.2],   splash:70, supp:.7, burst:2, ammo:5 },
 };
 
 /* ══════════════════════════ UNIT TYPES ══════════════════════════
