@@ -358,6 +358,9 @@ let running = true, speed = 1, autoRe = true, sound = false, showGrid = true;
 let curSide = 0, curTool = 'inf';
 let over = false, reTimer = 0, tick = 0, shake = 0;
 let logs = [], lastFavored = -1;
+/* 每方目标编制。默认 17 是"看得清谁在打谁"的值；
+   ?units=40 之类可以摆出大军对峙的场面（截图、演示用） */
+let FIELD_TARGET = clamp(+(new URLSearchParams(location.search).get('units') || 17), 4, 60);
 
 /* ══════════════════════════ 纸 & 伤痕层 ══════════════════════════ */
 let paper = null, scars = null, scarFade = 0;
@@ -672,7 +675,7 @@ function update(dt) {
       /* 波动平衡：不把双方死死锁在 50:50，让优势像潮水一样在两边来回 ——
          一方攻势推进一阵，再被扳回来。只有落后到快崩盘时才强力兜底。 */
       reTimer = 1.15;
-      const TARGET = 17;          // 太多就看不清谁在打谁；密度靠压制强度补回来
+      const TARGET = FIELD_TARGET;
       let nb = 0, nr = 0;
       for (const u of units) u.side === 0 ? nb++ : nr++;
       const cap = [nb, nr];

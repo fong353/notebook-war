@@ -48,7 +48,8 @@ A single HTML file. No build step, no dependencies, no network calls — open it
 it needs no server, no build step and makes no network calls.
 
 - `?warmup=45` skips ahead 45 in-game seconds, so you land in the middle of a fight instead of at
-  the opening deployment. Handy for screenshots.
+  the opening deployment. `?units=38` raises each side's target strength from the default 17 —
+  good for a wide screen and a proper mass engagement. Both are handy for screenshots.
 - Drag on the field to draw units. Click an order, then click the field to aim it.
 - Hover any unit to see its designation, weapons, remaining ammo and current state.
 - `Space` pauses, number/letter keys pick a unit type, `Tab` switches which side your pen belongs to.
