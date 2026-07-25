@@ -5,7 +5,8 @@
 **English** · [中文](README.zh-CN.md)
 
 **[▶ Play it in your browser](https://fong353.github.io/notebook-war/)**
- · [Cold War version](https://fong353.github.io/notebook-war/cold-war.html)
+ · [Cold War](https://fong353.github.io/notebook-war/cold-war.html)
+ · [Galactic](https://fong353.github.io/notebook-war/starwars.html)
 
 ![Battle](docs/battle.png)
 
@@ -29,8 +30,10 @@ bombers that have to fly a real attack run instead of hovering over the target.
 
 A single HTML file. No build step, no dependencies, no network calls — open it and it runs.
 
-- **Two eras.** `index.html` is 1944: Wehrmacht, US Army and Red Army, pick any two to fight.
-  `cold-war.html` is the earlier version: US vs USSR, with helicopters, drones and cruise missiles.
+- **Three settings.** `index.html` is 1944: Wehrmacht, US Army and Red Army, pick any two to fight.
+  `cold-war.html` is US vs USSR, with helicopters, drones and cruise missiles.
+  `starwars.html` is Empire / Rebels / Republic — walkers instead of tanks, so an AT-AT strides in
+  on four jointed legs while a TIE fighter holds its hex panels overhead.
 - **Bilingual.** One button in the corner switches the whole interface between English and Chinese,
   designations included (`Pz.VI Tiger` ↔ `Pz.VI 虎式`).
 - **16 unit types**, each with real equipment per nation — a Tiger, a Sherman and a T-34 are three
@@ -60,6 +63,8 @@ it needs no server, no build step and makes no network calls.
 - Works on phones — there's a **Rotate** button, because a battlefield wants to be wide.
 
 ![Cold War](docs/coldwar.png)
+
+![Galactic](docs/galactic.png)
 
 ## Notes on how it works
 

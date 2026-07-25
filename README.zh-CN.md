@@ -6,6 +6,7 @@
 
 **[▶ 在浏览器里玩](https://fong353.github.io/notebook-war/?lang=zh)**
  · [冷战版](https://fong353.github.io/notebook-war/cold-war.html?lang=zh)
+ · [星战版](https://fong353.github.io/notebook-war/starwars.html?lang=zh)
 
 ![对战画面](docs/battle.png)
 
@@ -25,8 +26,10 @@
 
 一个 HTML 文件。没有构建步骤、没有依赖、不发任何网络请求——打开就能跑。
 
-- **两个年代。** `index.html` 是 1944：德军、美军、苏军，任选两家对打。
-  `cold-war.html` 是早先那版：美苏对抗，有直升机、无人机和巡航导弹。
+- **三套设定。** `index.html` 是 1944：德军、美军、苏军，任选两家对打。
+  `cold-war.html` 是美苏对抗，有直升机、无人机和巡航导弹。
+  `starwars.html` 是银河帝国 / 义军同盟 / 银河共和国——坦克换成步行机，
+  AT-AT 迈着四条分节长腿走过来，钛战机顶着两片六边形板悬在头上。
 - **中英双语。** 界面右下角一个按钮切换，型号名也跟着换（`Pz.VI 虎式` ↔ `Pz.VI Tiger`）。
 - **16 个兵种**，每国用各自的真实装备——虎式、谢尔曼、T-34 是三种不同的轮廓，不是同一个方块换三种颜色。
 - **武器是独立的东西。** 一个单位挂一两门，各有射程、装填和弹药，开火时按"对当前目标的有效伤害"
@@ -52,6 +55,8 @@
   `?units=38` 把每方编制从默认 17 提到 38，配宽屏摆大军；`?lang=en` 指定语言。
 
 ![冷战版](docs/coldwar.png)
+
+![星战版](docs/galactic.png)
 
 ## 几处实现上的笔记
 
