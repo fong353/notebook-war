@@ -2,6 +2,8 @@
 
 *The war I used to draw in the margins of my school notebooks — rebuilt so that it fights itself.*
 
+**English** · [中文](README.zh-CN.md)
+
 **[▶ Play it in your browser](https://fong353.github.io/notebook-war/)**
  · [Cold War version](https://fong353.github.io/notebook-war/cold-war.html)
 
@@ -29,6 +31,8 @@ A single HTML file. No build step, no dependencies, no network calls — open it
 
 - **Two eras.** `index.html` is 1944: Wehrmacht, US Army and Red Army, pick any two to fight.
   `cold-war.html` is the earlier version: US vs USSR, with helicopters, drones and cruise missiles.
+- **Bilingual.** One button in the corner switches the whole interface between English and Chinese,
+  designations included (`Pz.VI Tiger` ↔ `Pz.VI 虎式`).
 - **16 unit types**, each with real equipment per nation — a Tiger, a Sherman and a T-34 are three
   different silhouettes, not three colours of the same box.
 - **Weapons are separate things.** A unit carries one or two, each with its own range, reload and
@@ -49,7 +53,7 @@ it needs no server, no build step and makes no network calls.
 
 - `?warmup=45` skips ahead 45 in-game seconds, so you land in the middle of a fight instead of at
   the opening deployment. `?units=38` raises each side's target strength from the default 17 —
-  good for a wide screen and a proper mass engagement. Both are handy for screenshots.
+  good for a wide screen and a proper mass engagement. `?lang=en|zh` forces a language.
 - Drag on the field to draw units. Click an order, then click the field to aim it.
 - Hover any unit to see its designation, weapons, remaining ammo and current state.
 - `Space` pauses, number/letter keys pick a unit type, `Tab` switches which side your pen belongs to.
