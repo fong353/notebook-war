@@ -340,21 +340,21 @@ const WPN = {
    Suppression resistance (morale), withdraw threshold (grit) and assault behaviour (aggr)
    are no longer written out per unit — they are derived below from armor/support/range  */
 const UNITS = {
-  inf:   { name:['Infantry','步兵'],     sub:['Rifle + grenade','步枪+手榴弹'],  k:'1', m:[['Stormtrooper','风暴兵'],['Rebel Trooper','义军士兵'],['Clone Trooper','克隆人士兵']],           bar:25, layer:'g', hp:34,  spd:26, armor:0, h:24, w:['rifle','grenade'],   aggr:1, weight:30 },
-  mg:    { name:['MG Team','机枪组'],    sub:['Suppressing fire','压制射击'],    k:'2', m:[['E-Web Repeater','E-Web 重型连发炮'],['Rebel Repeater','义军连发炮'],['Z-6 Rotary','Z-6 转管炮']],                     bar:21, layer:'g', hp:46,  spd:15, armor:0, h:18, w:['hmg'],               aggr:1, weight:16 },
-  sniper:{ name:['Sniper','狙击手'],     sub:['Anti-infantry','专杀步兵'],       k:'3', m:[['Scout Trooper','侦察兵'],['Rebel Marksman','义军神射手'],['Clone Sharpshooter','克隆人神射手']],                       bar:14, layer:'g', hp:26,  spd:18, armor:0, h:12, w:['srifle'],            weight:8 },
-  atgm:  { name:['AT Team','反坦克组'],  sub:['Launcher + rifle','火箭筒+步枪'], k:'4', m:[['PLX Rocket Trooper','火箭兵'],['Rebel PLX Team','PLX 小组'],['RPS-6 Team','RPS-6 小组']],                  bar:25, layer:'g', hp:40,  spd:15, armor:0, h:22, w:['atTube','rifle'],    aggr:1, weight:11 },
-  tank:  { name:['Tank','坦克'],         sub:['Main gun + coax','主炮+同轴枪'],  k:'5', m:[['AT-AT Walker','AT-AT 步行机'],['T4-B Heavy Tank','T4-B 重型坦克'],['AT-TE Walker','AT-TE 步行机']],                            bar:30, layer:'g', hp:235, spd:15, armor:2, h:16, w:['tankGun','coax'],    aggr:1, weight:18 },
-  ifv:   { name:['Halftrack','装甲车'],  sub:['Transport + MG','载具·车载枪'],   k:'6', m:[['AT-ST Walker','AT-ST 步行机'],['Landspeeder','陆行艇'],['AT-RT Walker','AT-RT 步行机']],                  bar:21, layer:'g', hp:100, spd:31, armor:1, h:14, w:['htMg'],             aggr:1, weight:14 },
-  aa:    { name:['Light AA','轻高炮'],   sub:['Close-range flak','近程弹幕'],    k:'7', m:[['DF.9 Battery','DF.9 炮台'],['1.4 FD P-Tower','1.4 FD 炮塔'],['AV-7 Cannon','AV-7 炮']],                                bar:34, layer:'g', hp:95,  spd:12, armor:1, h:16, w:['flakLt'], hold:190,  weight:11 },
-  sam:   { name:['Heavy Cannon','重炮台'],   sub:['Flak + AT','对空·打坦克'],        k:'8', m:[['SPMA-T Shell','SPMA-T 炮弹'],['Ion Cannon','离子炮'],['SPHA-T Beam','SPHA-T 光束']],                        bar:34, layer:'g', hp:88,  spd:10, armor:1, h:18, w:['flak88'], hold:300,  weight:9 },
-  arty:  { name:['Howitzer','榴弹炮'],   sub:['Long-range splash','超远溅射'],   k:'9', m:[['Imperial Mortar','帝国迫击炮'],['Rebel Mortar','义军迫击炮'],['Clone Mortar','克隆人迫击炮']],                    bar:30, layer:'g', hp:105, spd:8,  armor:1, h:16, w:['howitzer'],          weight:9 },
-  mlrs:  { name:['Rockets','火箭炮'],    sub:['6-round salvo','6发齐射'],        k:'0', m:[['MLC-3 Launcher','MLC-3 发射器'],['Rebel Rocket Battery','义军火箭炮台'],['Clone Rocket Battery','共和国火箭炮台']],     bar:28, layer:'g', hp:92,  spd:7,  armor:1, h:18, w:['mlrsSalvo'],         weight:7 },
-  supply:{ name:['Supply','补给车'],     sub:['Unsuppress + reload','解压制·快装填'], k:'u', m:[['Supply Droid','补给机器人'],['Rebel Supply Truck','义军补给车'],['Clone Supply Walker','共和国补给步行机']],                   bar:19, layer:'g', hp:80,  spd:20, armor:1, h:16, w:[], hold:250, support:'supply', weight:8 },
-  medic: { name:['Medic','卫生兵'],      sub:['Heals wounded','救治伤员'],       k:'i', m:[['2-1B Medical Droid','2-1B 医疗机器人'],['Rebel Medic','义军医护兵'],['Clone Medic','克隆人医护兵']],                       bar:25, layer:'g', hp:36,  spd:24, armor:0, h:22, w:[], hold:190, support:'medic',  weight:8 },
+  inf:   { name:['Infantry','步兵'],     sub:['Rifle + grenade','步枪+手榴弹'],  k:'1', m:[['Stormtrooper','风暴兵'],['Rebel Trooper','义军士兵'],['Clone Trooper','克隆人士兵']],           bar:25, sizeM:1.8, layer:'g', hp:34,  spd:26, armor:0, h:24, w:['rifle','grenade'],   aggr:1, weight:30 },
+  mg:    { name:['MG Team','机枪组'],    sub:['Suppressing fire','压制射击'],    k:'2', m:[['E-Web Repeater','E-Web 重型连发炮'],['Rebel Repeater','义军连发炮'],['Z-6 Rotary','Z-6 转管炮']],                     bar:21, sizeM:1.15, layer:'g', hp:46,  spd:15, armor:0, h:18, w:['hmg'],               aggr:1, weight:16 },
+  sniper:{ name:['Sniper','狙击手'],     sub:['Anti-infantry','专杀步兵'],       k:'3', m:[['Scout Trooper','侦察兵'],['Rebel Marksman','义军神射手'],['Clone Sharpshooter','克隆人神射手']],                       bar:14, sizeM:0.6, layer:'g', hp:26,  spd:18, armor:0, h:12, w:['srifle'],            weight:8 },
+  atgm:  { name:['AT Team','反坦克组'],  sub:['Launcher + rifle','火箭筒+步枪'], k:'4', m:[['PLX Rocket Trooper','火箭兵'],['Rebel PLX Team','PLX 小组'],['RPS-6 Team','RPS-6 小组']],                  bar:25, sizeM:1.8, layer:'g', hp:40,  spd:15, armor:0, h:22, w:['atTube','rifle'],    aggr:1, weight:11 },
+  tank:  { name:['Tank','坦克'],         sub:['Main gun + coax','主炮+同轴枪'],  k:'5', m:[['AT-AT Walker','AT-AT 步行机'],['T4-B Heavy Tank','T4-B 重型坦克'],['AT-TE Walker','AT-TE 步行机']],                            bar:30, sizeM:4.5, layer:'g', hp:235, spd:15, armor:2, h:16, w:['tankGun','coax'],    aggr:1, weight:18 },
+  ifv:   { name:['Halftrack','装甲车'],  sub:['Transport + MG','载具·车载枪'],   k:'6', m:[['AT-ST Walker','AT-ST 步行机'],['Landspeeder','陆行艇'],['AT-RT Walker','AT-RT 步行机']],                  bar:21, sizeM:2.6, layer:'g', hp:100, spd:31, armor:1, h:14, w:['htMg'],             aggr:1, weight:14 },
+  aa:    { name:['Light AA','轻高炮'],   sub:['Close-range flak','近程弹幕'],    k:'7', m:[['DF.9 Battery','DF.9 炮台'],['1.4 FD P-Tower','1.4 FD 炮塔'],['AV-7 Cannon','AV-7 炮']],                                bar:34, sizeM:2.2, layer:'g', hp:95,  spd:12, armor:1, h:16, w:['flakLt'], hold:190,  weight:11 },
+  sam:   { name:['Heavy Cannon','重炮台'],   sub:['Flak + AT','对空·打坦克'],        k:'8', m:[['SPMA-T Shell','SPMA-T 炮弹'],['Ion Cannon','离子炮'],['SPHA-T Beam','SPHA-T 光束']],                        bar:34, sizeM:3.0, layer:'g', hp:88,  spd:10, armor:1, h:18, w:['flak88'], hold:300,  weight:9 },
+  arty:  { name:['Howitzer','榴弹炮'],   sub:['Long-range splash','超远溅射'],   k:'9', m:[['Imperial Mortar','帝国迫击炮'],['Rebel Mortar','义军迫击炮'],['Clone Mortar','克隆人迫击炮']],                    bar:30, sizeM:2.6, layer:'g', hp:105, spd:8,  armor:1, h:16, w:['howitzer'],          weight:9 },
+  mlrs:  { name:['Rockets','火箭炮'],    sub:['6-round salvo','6发齐射'],        k:'0', m:[['MLC-3 Launcher','MLC-3 发射器'],['Rebel Rocket Battery','义军火箭炮台'],['Clone Rocket Battery','共和国火箭炮台']],     bar:28, sizeM:2.4, layer:'g', hp:92,  spd:7,  armor:1, h:18, w:['mlrsSalvo'],         weight:7 },
+  supply:{ name:['Supply','补给车'],     sub:['Unsuppress + reload','解压制·快装填'], k:'u', m:[['Supply Droid','补给机器人'],['Rebel Supply Truck','义军补给车'],['Clone Supply Walker','共和国补给步行机']],                   bar:19, sizeM:2.4, layer:'g', hp:80,  spd:20, armor:1, h:16, w:[], hold:250, support:'supply', weight:8 },
+  medic: { name:['Medic','卫生兵'],      sub:['Heals wounded','救治伤员'],       k:'i', m:[['2-1B Medical Droid','2-1B 医疗机器人'],['Rebel Medic','义军医护兵'],['Clone Medic','克隆人医护兵']],                       bar:25, sizeM:1.8, layer:'g', hp:36,  spd:24, armor:0, h:22, w:[], hold:190, support:'medic',  weight:8 },
   /* Paratroopers drift down under canopy and only fight once they land. weight 0 keeps them
      out of the reinforcement pool, so they never just appear on the ground */
-  para:  { name:['Paratrooper','伞兵'],  sub:['Airborne · elite','空降·精锐'],   k:'p', m:[['Jump Trooper','跳跃兵'],['Rebel Pathfinder','义军先锋'],['Clone Jet Trooper','克隆人喷射兵']],              bar:27, layer:'g', hp:44,  spd:28, armor:0, h:24, w:['rifle','grenade'], aggr:1, weight:0 },
+  para:  { name:['Paratrooper','伞兵'],  sub:['Airborne · elite','空降·精锐'],   k:'p', m:[['Jump Trooper','跳跃兵'],['Rebel Pathfinder','义军先锋'],['Clone Jet Trooper','克隆人喷射兵']],              bar:27, sizeM:1.8, layer:'g', hp:44,  spd:28, armor:0, h:24, w:['rifle','grenade'], aggr:1, weight:0 },
 
   fig:   { name:['Fighter','战斗机'],    sub:['Guns · dogfight','机枪·缠斗'],    k:'q', m:[['TIE Fighter','钛战机'],['X-wing','X 翼战机'],['ARC-170','ARC-170']],                                   bar:15, layer:'a', hp:72,  spd:66, armor:1, h:12, w:['fighterGun'],        alt:250, fuel:55, weight:13 },
   atk:   { name:['Dive Bomber','俯冲轰炸'],sub:['Strafe + rockets','扫射+火箭'], k:'w', m:[['TIE Bomber','钛轰炸机'],['Y-wing','Y 翼战机'],['LAAT Gunship','LAAT 炮艇']],   bar:17, layer:'a', hp:118, spd:46, armor:1, h:14, w:['attackGun','agRocket'], alt:95, fuel:50, weight:12 },
@@ -1334,6 +1334,62 @@ function leg(x, y, len, back, sw) {
   if (sw) rline(kx + (back ? len * .2 : -len * .16) - 2, y + len, kx + (back ? len * .2 : -len * .16) + 3, y + len);
 }
 
+/* ══════════════════════════ 显示比例 ══════════════════════════
+   真实尺寸差有十几倍：步兵 1.8 米、虎式 3 米、古斯塔夫将近 5 米。照搬会把
+   步兵画成蚂蚁，全都一样大又没有分量感。取 (真实高 / 1.8) 的 0.55 次方 ——
+   坦克比人明显高一圈，攻城炮压得住场，步兵仍然看得清。
+
+   每个单位画出来多大是一笔一笔手画的，难免参差（校准之前四个版本的坦克
+   居然全都比步兵还矮）。所以启动时拿一个只记坐标的假 context 把每种单位
+   描一遍，量出它实际占多高，再反算该缩放多少 —— 以后改画法也不用手动
+   重算系数。sizeM 是"视觉占位高度"而不是严格的物理尺寸：骑兵举着长矛、
+   火炮扬着炮管，这些都算进人眼看到的那个块头里。 */
+const SIZE_REF = 1.8, SIZE_POW = .55;
+function calibrate() {
+  const b = { x0: 1e9, y0: 1e9, x1: -1e9, y1: -1e9 };
+  const T = (x, y) => {
+    if (!isFinite(x) || !isFinite(y)) return;
+    b.x0 = Math.min(b.x0, x); b.x1 = Math.max(b.x1, x);
+    b.y0 = Math.min(b.y0, y); b.y1 = Math.max(b.y1, y);
+  };
+  let lw = 1.7;
+  const probe = {
+    save() {}, restore() {}, beginPath() {}, stroke() {}, fill() {}, closePath() {},
+    setLineDash() {}, translate() {}, scale() {}, rotate() {}, fillText() {},
+    moveTo: T, lineTo: T,
+    arc(x, y, r) { T(x - r, y - r); T(x + r, y + r); },
+    ellipse(x, y, rx, ry) { T(x - rx, y - ry); T(x + rx, y + ry); },
+    quadraticCurveTo(a, c, x, y) { T(a, c); T(x, y); },
+    bezierCurveTo(a, c, d, e, x, y) { T(a, c); T(d, e); T(x, y); },
+    rect(x, y, w, h) { T(x, y); T(x + w, y + h); },
+    get lineWidth() { return lw; }, set lineWidth(v) { lw = v; },
+  };
+  for (const p of ['strokeStyle', 'fillStyle', 'globalAlpha', 'lineCap', 'lineJoin', 'font'])
+    Object.defineProperty(probe, p, { set() {}, get() { return ''; } });
+  const real = ctx, H = {};
+  for (const k of ALL) {
+    const d = UNITS[k];
+    d.gsc = 1;
+    if (!DRAW[k] || !d.sizeM) continue;
+    const u = { d, ph: 1.1, flash: 0, prone: 0, aimEl: .15, hp: d.hp, max: d.hp, sd: 7,
+      dropping: 0, face: 1, alt: d.alt || 0, wz: .5, wx: 0, side: 0, smokeT: 0,
+      bunker: null, dmgTrack: 0, turnT: 0, rank: 0, leg: 0, egress: 0, fuel: 9, tgt: null };
+    b.x0 = b.y0 = 1e9; b.x1 = b.y1 = -1e9; lw = 1.7;
+    ctx = probe; seed(11);
+    try { DRAW[k](u, 0); } catch (e) { ctx = real; continue; }
+    ctx = real;
+    if (b.y1 - b.y0 > 1) H[k] = b.y1 - b.y0;
+  }
+  /* 基准取步兵自己画出来的高度，而不是一个写死的像素数 —— 这样整体大小
+     保持原样，只是把各兵种之间的相对比例摆正 */
+  const base = H.inf;
+  if (!base) return;
+  for (const k of ALL) {
+    const d = UNITS[k];
+    if (H[k] && d.sizeM) d.gsc = base * Math.pow(d.sizeM / SIZE_REF, SIZE_POW) / H[k];
+  }
+}
+
 const DRAW = {
   /* ── Infantry: white armour / rebel fatigues / clone armour ── */
   inf(u, n) {
@@ -1627,7 +1683,7 @@ const DRAW = {
 };
 
 function drawUnit(u, alpha, dead) {
-  const q = proj(u.wx, u.wz, u.alt || 0), sc = scaleAt(q[2]);
+  const q = proj(u.wx, u.wz, u.alt || 0), sc = scaleAt(q[2]) * (u.d.gsc || 1);
   if (!dead || u.alt > 4) {
     const gy = gyAt(u.wz);
     ctx.save();
@@ -2281,6 +2337,7 @@ initArmies();
 const warmup = Math.min(+(new URLSearchParams(location.search).get('warmup') || 0), 180);
 if (warmup > 0) for (let i = 0, n = warmup / .016; i < n; i++) update(.016);
 
+calibrate();
 requestAnimationFrame(loop);
 setTimeout(() => { const h = $('hint'); h.style.transition = 'opacity 1s'; h.style.opacity = 0; }, 9000);
 </script>

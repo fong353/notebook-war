@@ -341,21 +341,21 @@ const WPN = {
    抗压制(morale)、撤退阈值(grit)、突击性(aggr) 都不再逐个手写，
    由 armor / support / 射程派生 —— 见下面的预处理                     */
 const UNITS = {
-  inf:   { name:['Infantry','步兵'], m:[['M16 Rifleman','M16 步兵'],['Motor Rifleman','摩步兵']],   sub:['Rifle + grenade','步枪+手雷'],  k:'1', bar:25, layer:'g', hp:34,  spd:26, armor:0, h:24, w:['rifle','grenade'],   aggr:1, weight:30 },
-  mg:    { name:['MG Team','机枪班'], m:[['M240 Team','M240 机枪组'],['PKM Team','PKM 机枪组']], sub:['Suppressing fire','三连发压制'], k:'2', bar:21, layer:'g', hp:46,  spd:15, armor:0, h:18, w:['hmg'],               aggr:1, weight:16 },
-  sniper:{ name:['Sniper','狙击手'], m:[['M24 Sniper','M24 狙击手'],['SVD Sniper','SVD 狙击手']], sub:['Anti-infantry','专杀步兵'],   k:'3', bar:14, layer:'g', hp:26,  spd:18, armor:0, h:12, w:['srifle'],            weight:8 },
-  atgm:  { name:['ATGM Team','反坦克组'], m:[['Javelin Team','标枪小组'],['Fagot Team','婴儿小组']],sub:['Missile + rifle','导弹+自卫枪'],k:'4', bar:25, layer:'g', hp:40,  spd:15, armor:0, h:22, w:['atgmMsl','rifle'],   weight:11 },
-  tank:  { name:['MBT','主战坦克'], m:[['M1A1 Abrams','M1A1 艾布拉姆斯'],['T-72','T-72']],sub:['Main gun + coax','主炮+同轴枪'],k:'5', bar:30, layer:'g', hp:235, spd:15, armor:2, h:16, w:['tankGun','coax'],    aggr:1, weight:18 },
-  ifv:   { name:['IFV','步战车'], m:[['M2 Bradley','M2 布雷德利'],['BMP-2','BMP-2']], sub:['Autocannon + ATGM','机炮+反坦克'],k:'6', bar:21, layer:'g', hp:112, spd:31, armor:1, h:14, w:['autocan','vehAtgm'], aggr:1, weight:14 },
-  aa:    { name:['AA Gun','高射炮'], m:[['M163 Vulcan','M163 火神'],['ZSU-23-4 Shilka','ZSU-23-4 石勒喀']], sub:'近程弹幕',   k:'7', bar:34, layer:'g', hp:95,  spd:12, armor:1, h:16, w:['flakGun'], hold:210, weight:11 },
-  sam:   { name:['SAM','防空导弹'], m:[['MIM-104 Patriot','MIM-104 爱国者'],['S-300','S-300']],sub:['Long-range AA','远程猎机'],   k:'8', bar:34, layer:'g', hp:88,  spd:10, armor:1, h:18, w:['samMsl'],  hold:300, weight:8 },
-  arty:  { name:['SPG','榴弹炮'], m:[['M109 Paladin','M109 帕拉丁'],['2S3 Akatsiya','2S3 金合欢']], sub:['Long-range splash','超远溅射'],   k:'9', bar:30, layer:'g', hp:105, spd:8,  armor:1, h:16, w:['howitzer'],          weight:9 },
-  mlrs:  { name:['MLRS','火箭炮'], m:[['M270 MLRS','M270 MLRS'],['BM-30 Smerch','BM-30 龙卷风']], sub:['6-round salvo','6发齐射'],    k:'0', bar:28, layer:'g', hp:92,  spd:7,  armor:1, h:18, w:['mlrsSalvo'],         weight:7 },
-  supply:{ name:['Supply','补给车'], m:[['M978 HEMTT','M978 HEMTT'],['Ural-4320','Ural-4320']], sub:['Unsuppress + reload','解压制·快装填'],k:'u',bar:19, layer:'g', hp:80, spd:20, armor:1, h:16, w:[], hold:250, support:'supply', weight:8 },
-  medic: { name:['Medic','医疗兵'], m:[['Combat Medic','战斗医护兵'],['Saninstruktor','卫生指导员']], sub:['Heals wounded','救治伤员'],   k:'i', bar:25, layer:'g', hp:36,  spd:24, armor:0, h:22, w:[], hold:190, support:'medic',  weight:8 },
+  inf:   { name:['Infantry','步兵'], m:[['M16 Rifleman','M16 步兵'],['Motor Rifleman','摩步兵']],   sub:['Rifle + grenade','步枪+手雷'],  k:'1', bar:25, sizeM:1.8, layer:'g', hp:34,  spd:26, armor:0, h:24, w:['rifle','grenade'],   aggr:1, weight:30 },
+  mg:    { name:['MG Team','机枪班'], m:[['M240 Team','M240 机枪组'],['PKM Team','PKM 机枪组']], sub:['Suppressing fire','三连发压制'], k:'2', bar:21, sizeM:1.15, layer:'g', hp:46,  spd:15, armor:0, h:18, w:['hmg'],               aggr:1, weight:16 },
+  sniper:{ name:['Sniper','狙击手'], m:[['M24 Sniper','M24 狙击手'],['SVD Sniper','SVD 狙击手']], sub:['Anti-infantry','专杀步兵'],   k:'3', bar:14, sizeM:0.6, layer:'g', hp:26,  spd:18, armor:0, h:12, w:['srifle'],            weight:8 },
+  atgm:  { name:['ATGM Team','反坦克组'], m:[['Javelin Team','标枪小组'],['Fagot Team','婴儿小组']],sub:['Missile + rifle','导弹+自卫枪'],k:'4', bar:25, sizeM:1.8, layer:'g', hp:40,  spd:15, armor:0, h:22, w:['atgmMsl','rifle'],   weight:11 },
+  tank:  { name:['MBT','主战坦克'], m:[['M1A1 Abrams','M1A1 艾布拉姆斯'],['T-72','T-72']],sub:['Main gun + coax','主炮+同轴枪'],k:'5', bar:30, sizeM:2.4, layer:'g', hp:235, spd:15, armor:2, h:16, w:['tankGun','coax'],    aggr:1, weight:18 },
+  ifv:   { name:['IFV','步战车'], m:[['M2 Bradley','M2 布雷德利'],['BMP-2','BMP-2']], sub:['Autocannon + ATGM','机炮+反坦克'],k:'6', bar:21, sizeM:2.6, layer:'g', hp:112, spd:31, armor:1, h:14, w:['autocan','vehAtgm'], aggr:1, weight:14 },
+  aa:    { name:['AA Gun','高射炮'], m:[['M163 Vulcan','M163 火神'],['ZSU-23-4 Shilka','ZSU-23-4 石勒喀']], sub:'近程弹幕',   k:'7', bar:34, sizeM:2.4, layer:'g', hp:95,  spd:12, armor:1, h:16, w:['flakGun'], hold:210, weight:11 },
+  sam:   { name:['SAM','防空导弹'], m:[['MIM-104 Patriot','MIM-104 爱国者'],['S-300','S-300']],sub:['Long-range AA','远程猎机'],   k:'8', bar:34, sizeM:2.6, layer:'g', hp:88,  spd:10, armor:1, h:18, w:['samMsl'],  hold:300, weight:8 },
+  arty:  { name:['SPG','榴弹炮'], m:[['M109 Paladin','M109 帕拉丁'],['2S3 Akatsiya','2S3 金合欢']], sub:['Long-range splash','超远溅射'],   k:'9', bar:30, sizeM:2.8, layer:'g', hp:105, spd:8,  armor:1, h:16, w:['howitzer'],          weight:9 },
+  mlrs:  { name:['MLRS','火箭炮'], m:[['M270 MLRS','M270 MLRS'],['BM-30 Smerch','BM-30 龙卷风']], sub:['6-round salvo','6发齐射'],    k:'0', bar:28, sizeM:3.0, layer:'g', hp:92,  spd:7,  armor:1, h:18, w:['mlrsSalvo'],         weight:7 },
+  supply:{ name:['Supply','补给车'], m:[['M978 HEMTT','M978 HEMTT'],['Ural-4320','Ural-4320']], sub:['Unsuppress + reload','解压制·快装填'],k:'u',bar:19, sizeM:2.8, layer:'g', hp:80, spd:20, armor:1, h:16, w:[], hold:250, support:'supply', weight:8 },
+  medic: { name:['Medic','医疗兵'], m:[['Combat Medic','战斗医护兵'],['Saninstruktor','卫生指导员']], sub:['Heals wounded','救治伤员'],   k:'i', bar:25, sizeM:1.8, layer:'g', hp:36,  spd:24, armor:0, h:22, w:[], hold:190, support:'medic',  weight:8 },
   /* 伞兵：投下来时挂在伞上慢慢飘，落地收伞才算能打。weight 0 = 不进自动增援池，
      只能靠"空降"指令或手动投放，免得凭空出现在地面上 */
-  para:  { name:['Paratrooper','伞兵'], m:[['82nd Airborne','82 空降师'],['VDV Airborne','VDV 空降兵']],   sub:['Airborne · elite','空降·精锐'],  k:'p', bar:27, layer:'g', hp:44,  spd:28, armor:0, h:24, w:['rifle','grenade'], aggr:1, weight:0 },
+  para:  { name:['Paratrooper','伞兵'], m:[['82nd Airborne','82 空降师'],['VDV Airborne','VDV 空降兵']],   sub:['Airborne · elite','空降·精锐'],  k:'p', bar:27, sizeM:1.8, layer:'g', hp:44,  spd:28, armor:0, h:24, w:['rifle','grenade'], aggr:1, weight:0 },
 
   fig:   { name:['Fighter','战斗机'], m:[['F-15C Eagle','F-15C 鹰'],['MiG-29','MiG-29']], sub:['AAM + guns','空空弹+航炮'],k:'q', bar:15, layer:'a', hp:72,  spd:68, armor:1, h:12, w:['aam','gunpod'],       alt:250, fuel:55, weight:13 },
   atk:   { name:['Attacker','攻击机'], m:[['A-10 Thunderbolt II','A-10 雷电 II'],['Su-25 Frogfoot','Su-25 蛙足']], sub:['Gatling strafing','舔地加特林'], k:'w', bar:17, layer:'a', hp:125, spd:46, armor:1, h:14, w:['gatling','agRocket'], alt:95,  fuel:50, weight:11 },
@@ -1298,6 +1298,62 @@ function barrel(x, y, len, el, face) {
   return [x + Math.cos(el) * len, y - Math.sin(el) * len];
 }
 
+/* ══════════════════════════ 显示比例 ══════════════════════════
+   真实尺寸差有十几倍：步兵 1.8 米、虎式 3 米、古斯塔夫将近 5 米。照搬会把
+   步兵画成蚂蚁，全都一样大又没有分量感。取 (真实高 / 1.8) 的 0.55 次方 ——
+   坦克比人明显高一圈，攻城炮压得住场，步兵仍然看得清。
+
+   每个单位画出来多大是一笔一笔手画的，难免参差（校准之前四个版本的坦克
+   居然全都比步兵还矮）。所以启动时拿一个只记坐标的假 context 把每种单位
+   描一遍，量出它实际占多高，再反算该缩放多少 —— 以后改画法也不用手动
+   重算系数。sizeM 是"视觉占位高度"而不是严格的物理尺寸：骑兵举着长矛、
+   火炮扬着炮管，这些都算进人眼看到的那个块头里。 */
+const SIZE_REF = 1.8, SIZE_POW = .55;
+function calibrate() {
+  const b = { x0: 1e9, y0: 1e9, x1: -1e9, y1: -1e9 };
+  const T = (x, y) => {
+    if (!isFinite(x) || !isFinite(y)) return;
+    b.x0 = Math.min(b.x0, x); b.x1 = Math.max(b.x1, x);
+    b.y0 = Math.min(b.y0, y); b.y1 = Math.max(b.y1, y);
+  };
+  let lw = 1.7;
+  const probe = {
+    save() {}, restore() {}, beginPath() {}, stroke() {}, fill() {}, closePath() {},
+    setLineDash() {}, translate() {}, scale() {}, rotate() {}, fillText() {},
+    moveTo: T, lineTo: T,
+    arc(x, y, r) { T(x - r, y - r); T(x + r, y + r); },
+    ellipse(x, y, rx, ry) { T(x - rx, y - ry); T(x + rx, y + ry); },
+    quadraticCurveTo(a, c, x, y) { T(a, c); T(x, y); },
+    bezierCurveTo(a, c, d, e, x, y) { T(a, c); T(d, e); T(x, y); },
+    rect(x, y, w, h) { T(x, y); T(x + w, y + h); },
+    get lineWidth() { return lw; }, set lineWidth(v) { lw = v; },
+  };
+  for (const p of ['strokeStyle', 'fillStyle', 'globalAlpha', 'lineCap', 'lineJoin', 'font'])
+    Object.defineProperty(probe, p, { set() {}, get() { return ''; } });
+  const real = ctx, H = {};
+  for (const k of ALL) {
+    const d = UNITS[k];
+    d.gsc = 1;
+    if (!DRAW[k] || !d.sizeM) continue;
+    const u = { d, ph: 1.1, flash: 0, prone: 0, aimEl: .15, hp: d.hp, max: d.hp, sd: 7,
+      dropping: 0, face: 1, alt: d.alt || 0, wz: .5, wx: 0, side: 0, smokeT: 0,
+      bunker: null, dmgTrack: 0, turnT: 0, rank: 0, leg: 0, egress: 0, fuel: 9, tgt: null };
+    b.x0 = b.y0 = 1e9; b.x1 = b.y1 = -1e9; lw = 1.7;
+    ctx = probe; seed(11);
+    try { DRAW[k](u, 0); } catch (e) { ctx = real; continue; }
+    ctx = real;
+    if (b.y1 - b.y0 > 1) H[k] = b.y1 - b.y0;
+  }
+  /* 基准取步兵自己画出来的高度，而不是一个写死的像素数 —— 这样整体大小
+     保持原样，只是把各兵种之间的相对比例摆正 */
+  const base = H.inf;
+  if (!base) return;
+  for (const k of ALL) {
+    const d = UNITS[k];
+    if (H[k] && d.sizeM) d.gsc = base * Math.pow(d.sizeM / SIZE_REF, SIZE_POW) / H[k];
+  }
+}
+
 const DRAW = {
   inf(u, r) {
     const b = bob(u);
@@ -1614,7 +1670,7 @@ const DRAW = {
 };
 
 function drawUnit(u, alpha, dead) {
-  const q = proj(u.wx, u.wz, u.alt || 0), sc = scaleAt(q[2]);
+  const q = proj(u.wx, u.wz, u.alt || 0), sc = scaleAt(q[2]) * (u.d.gsc || 1);
   if (!dead || u.alt > 4) {
     const gy = gyAt(u.wz);
     ctx.save();
@@ -2242,6 +2298,7 @@ initArmies();
 const warmup = Math.min(+(new URLSearchParams(location.search).get('warmup') || 0), 180);
 if (warmup > 0) for (let i = 0, n = warmup / .016; i < n; i++) update(.016);
 
+calibrate();
 requestAnimationFrame(loop);
 setTimeout(() => { const h = $('hint'); h.style.transition = 'opacity 1s'; h.style.opacity = 0; }, 9000);
 </script>

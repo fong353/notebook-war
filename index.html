@@ -342,22 +342,22 @@ const WPN = {
    Suppression resistance (morale), withdraw threshold (grit) and assault behaviour (aggr)
    are no longer written out per unit — they are derived below from armor/support/range  */
 const UNITS = {
-  inf:   { name:['Infantry','步兵'],     sub:['Rifle + grenade','步枪+手榴弹'],  k:'1', m:[['Wehrmacht Infantry','国防军步兵'],['GI Rifleman','GI 步兵'],['Red Army Infantry','红军步兵']],           bar:25, layer:'g', hp:34,  spd:26, armor:0, h:24, w:['rifle','grenade'],   aggr:1, weight:30 },
-  mg:    { name:['MG Team','机枪组'],    sub:['Suppressing fire','压制射击'],    k:'2', m:[['MG42 Team','MG42 机枪组'],['Browning Team','勃朗宁机枪组'],['DP Team','DP 机枪组']],                     bar:21, layer:'g', hp:46,  spd:15, armor:0, h:18, w:['hmg'],               aggr:1, weight:16 },
-  sniper:{ name:['Sniper','狙击手'],     sub:['Anti-infantry','专杀步兵'],       k:'3', m:[['Scharfschütze','德军狙击手'],['US Sniper','美军狙击手'],['Snayper','苏军狙击手']],                       bar:14, layer:'g', hp:26,  spd:18, armor:0, h:12, w:['srifle'],            weight:8 },
-  atgm:  { name:['AT Team','反坦克组'],  sub:['Launcher + rifle','火箭筒+步枪'], k:'4', m:[['Panzerjäger','装甲猎兵'],['Bazooka Team','巴祖卡小组'],['AT Rifle Team','反坦克枪组']],                  bar:25, layer:'g', hp:40,  spd:15, armor:0, h:22, w:['atTube','rifle'],    aggr:1, weight:11 },
-  tank:  { name:['Tank','坦克'],         sub:['Main gun + coax','主炮+同轴枪'],  k:'5', m:[['Pz.VI Tiger','Pz.VI 虎式'],['M4 Sherman','M4 谢尔曼'],['T-34/76','T-34/76']],                            bar:30, layer:'g', hp:235, spd:15, armor:2, h:16, w:['tankGun','coax'],    aggr:1, weight:18 },
-  ifv:   { name:['Halftrack','装甲车'],  sub:['Transport + MG','载具·车载枪'],   k:'6', m:[['Sd.Kfz.251','Sd.Kfz.251'],['M3 Halftrack','M3 半履带车'],['ZiS-5 Truck','ZiS-5 卡车']],                  bar:21, layer:'g', hp:100, spd:31, armor:1, h:14, w:['htMg'],             aggr:1, weight:14 },
-  aa:    { name:['Light AA','轻高炮'],   sub:['Close-range flak','近程弹幕'],    k:'7', m:[['Flakvierling 38','四联高炮 38'],['M45 Quad','M45 四联'],['61-K','61-K']],                                bar:34, layer:'g', hp:95,  spd:12, armor:1, h:16, w:['flakLt'], hold:190,  weight:11 },
-  sam:   { name:['Heavy AA','重高炮'],   sub:['Flak + AT','对空·打坦克'],        k:'8', m:[['8.8cm Flak 36','8.8cm Flak 36'],['90mm M1','90mm M1'],['52-K 85mm','52-K 85mm']],                        bar:34, layer:'g', hp:88,  spd:10, armor:1, h:18, w:['flak88'], hold:300,  weight:9 },
-  arty:  { name:['Howitzer','榴弹炮'],   sub:['Long-range splash','超远溅射'],   k:'9', m:[['15cm sFH 18','15cm sFH 18'],['105mm M101','105mm M101'],['122mm M-30','122mm M-30']],                    bar:30, layer:'g', hp:105, spd:8,  armor:1, h:16, w:['howitzer'],          weight:9 },
-  mlrs:  { name:['Rockets','火箭炮'],    sub:['6-round salvo','6发齐射'],        k:'0', m:[['Nebelwerfer 41','烟雾发射器 41'],['T34 Calliope','T34 卡利俄佩'],['BM-13 Katyusha','BM-13 喀秋莎']],     bar:28, layer:'g', hp:92,  spd:7,  armor:1, h:18, w:['mlrsSalvo'],         weight:7 },
-  supply:{ name:['Supply','补给车'],     sub:['Unsuppress + reload','解压制·快装填'], k:'u', m:[['Opel Blitz','欧宝闪电'],['GMC CCKW','GMC CCKW'],['ZiS-5 Supply','ZiS-5 补给车']],                   bar:19, layer:'g', hp:80,  spd:20, armor:1, h:16, w:[], hold:250, support:'supply', weight:8 },
-  medic: { name:['Medic','卫生兵'],      sub:['Heals wounded','救治伤员'],       k:'i', m:[['Sanitäter','德军卫生兵'],['US Medic','美军医护兵'],['Saninstruktor','卫生指导员']],                       bar:25, layer:'g', hp:36,  spd:24, armor:0, h:22, w:[], hold:190, support:'medic',  weight:8 },
-  rail:  { name:['Siege Gun','攻城炮'], sub:['Reaches anywhere on the map','攻城重炮·打遍全图'], k:'-', bar:34, m:[['80cm Schwerer Gustav','80cm 古斯塔夫'],['240mm M1 Black Dragon','240mm 黑龙'],['203mm B-4','203mm B-4']], layer:'g', hp:190, spd:3, armor:1, h:20, w:['railGun'], hold:560, weight:3 },
+  inf:   { name:['Infantry','步兵'],     sub:['Rifle + grenade','步枪+手榴弹'],  k:'1', m:[['Wehrmacht Infantry','国防军步兵'],['GI Rifleman','GI 步兵'],['Red Army Infantry','红军步兵']],           bar:25, sizeM:1.8, layer:'g', hp:34,  spd:26, armor:0, h:24, w:['rifle','grenade'],   aggr:1, weight:30 },
+  mg:    { name:['MG Team','机枪组'],    sub:['Suppressing fire','压制射击'],    k:'2', m:[['MG42 Team','MG42 机枪组'],['Browning Team','勃朗宁机枪组'],['DP Team','DP 机枪组']],                     bar:21, sizeM:1.15, layer:'g', hp:46,  spd:15, armor:0, h:18, w:['hmg'],               aggr:1, weight:16 },
+  sniper:{ name:['Sniper','狙击手'],     sub:['Anti-infantry','专杀步兵'],       k:'3', m:[['Scharfschütze','德军狙击手'],['US Sniper','美军狙击手'],['Snayper','苏军狙击手']],                       bar:14, sizeM:0.6, layer:'g', hp:26,  spd:18, armor:0, h:12, w:['srifle'],            weight:8 },
+  atgm:  { name:['AT Team','反坦克组'],  sub:['Launcher + rifle','火箭筒+步枪'], k:'4', m:[['Panzerjäger','装甲猎兵'],['Bazooka Team','巴祖卡小组'],['AT Rifle Team','反坦克枪组']],                  bar:25, sizeM:1.8, layer:'g', hp:40,  spd:15, armor:0, h:22, w:['atTube','rifle'],    aggr:1, weight:11 },
+  tank:  { name:['Tank','坦克'],         sub:['Main gun + coax','主炮+同轴枪'],  k:'5', m:[['Pz.VI Tiger','Pz.VI 虎式'],['M4 Sherman','M4 谢尔曼'],['T-34/76','T-34/76']],                            bar:30, sizeM:2.9, layer:'g', hp:235, spd:15, armor:2, h:16, w:['tankGun','coax'],    aggr:1, weight:18 },
+  ifv:   { name:['Halftrack','装甲车'],  sub:['Transport + MG','载具·车载枪'],   k:'6', m:[['Sd.Kfz.251','Sd.Kfz.251'],['M3 Halftrack','M3 半履带车'],['ZiS-5 Truck','ZiS-5 卡车']],                  bar:21, sizeM:2.3, layer:'g', hp:100, spd:31, armor:1, h:14, w:['htMg'],             aggr:1, weight:14 },
+  aa:    { name:['Light AA','轻高炮'],   sub:['Close-range flak','近程弹幕'],    k:'7', m:[['Flakvierling 38','四联高炮 38'],['M45 Quad','M45 四联'],['61-K','61-K']],                                bar:34, sizeM:2.1, layer:'g', hp:95,  spd:12, armor:1, h:16, w:['flakLt'], hold:190,  weight:11 },
+  sam:   { name:['Heavy AA','重高炮'],   sub:['Flak + AT','对空·打坦克'],        k:'8', m:[['8.8cm Flak 36','8.8cm Flak 36'],['90mm M1','90mm M1'],['52-K 85mm','52-K 85mm']],                        bar:34, sizeM:2.3, layer:'g', hp:88,  spd:10, armor:1, h:18, w:['flak88'], hold:300,  weight:9 },
+  arty:  { name:['Howitzer','榴弹炮'],   sub:['Long-range splash','超远溅射'],   k:'9', m:[['15cm sFH 18','15cm sFH 18'],['105mm M101','105mm M101'],['122mm M-30','122mm M-30']],                    bar:30, sizeM:2.0, layer:'g', hp:105, spd:8,  armor:1, h:16, w:['howitzer'],          weight:9 },
+  mlrs:  { name:['Rockets','火箭炮'],    sub:['6-round salvo','6发齐射'],        k:'0', m:[['Nebelwerfer 41','烟雾发射器 41'],['T34 Calliope','T34 卡利俄佩'],['BM-13 Katyusha','BM-13 喀秋莎']],     bar:28, sizeM:2.4, layer:'g', hp:92,  spd:7,  armor:1, h:18, w:['mlrsSalvo'],         weight:7 },
+  supply:{ name:['Supply','补给车'],     sub:['Unsuppress + reload','解压制·快装填'], k:'u', m:[['Opel Blitz','欧宝闪电'],['GMC CCKW','GMC CCKW'],['ZiS-5 Supply','ZiS-5 补给车']],                   bar:19, sizeM:2.6, layer:'g', hp:80,  spd:20, armor:1, h:16, w:[], hold:250, support:'supply', weight:8 },
+  medic: { name:['Medic','卫生兵'],      sub:['Heals wounded','救治伤员'],       k:'i', m:[['Sanitäter','德军卫生兵'],['US Medic','美军医护兵'],['Saninstruktor','卫生指导员']],                       bar:25, sizeM:1.8, layer:'g', hp:36,  spd:24, armor:0, h:22, w:[], hold:190, support:'medic',  weight:8 },
+  rail:  { name:['Siege Gun','攻城炮'], sub:['Reaches anywhere on the map','攻城重炮·打遍全图'], k:'-', bar:34, m:[['80cm Schwerer Gustav','80cm 古斯塔夫'],['240mm M1 Black Dragon','240mm 黑龙'],['203mm B-4','203mm B-4']], sizeM:5.2, layer:'g', hp:190, spd:3, armor:1, h:20, w:['railGun'], hold:560, weight:3 },
   /* Paratroopers drift down under canopy and only fight once they land. weight 0 keeps them
      out of the reinforcement pool, so they never just appear on the ground */
-  para:  { name:['Paratrooper','伞兵'],  sub:['Airborne · elite','空降·精锐'],   k:'p', m:[['Fallschirmjäger','德军伞兵'],['82nd Airborne','82 空降师'],['VDV Airborne','苏军空降兵']],              bar:27, layer:'g', hp:44,  spd:28, armor:0, h:24, w:['rifle','grenade'], aggr:1, weight:0 },
+  para:  { name:['Paratrooper','伞兵'],  sub:['Airborne · elite','空降·精锐'],   k:'p', m:[['Fallschirmjäger','德军伞兵'],['82nd Airborne','82 空降师'],['VDV Airborne','苏军空降兵']],              bar:27, sizeM:1.8, layer:'g', hp:44,  spd:28, armor:0, h:24, w:['rifle','grenade'], aggr:1, weight:0 },
 
   v1:    { name:['V-1','V-1 飞弹'], sub:['One-way · can be shot down','一次性·可被击落'], k:'\\', bar:12, m:[['V-1 Flying Bomb','V-1 飞弹'],['—','—'],['—','—']], layer:'a', hp:40, spd:62, armor:0, h:8, w:['v1Warhead'], alt:150, fuel:0, suicide:1, weight:0 },
   fig:   { name:['Fighter','战斗机'],    sub:['Guns · dogfight','机枪·缠斗'],    k:'q', m:[['Bf 109G','Bf 109G'],['P-51D Mustang','P-51D 野马'],['Yak-3','Yak-3']],                                   bar:15, layer:'a', hp:72,  spd:66, armor:1, h:12, w:['fighterGun'],        alt:250, fuel:55, weight:13 },
@@ -1415,6 +1415,62 @@ function mark(x, y, r, n) {
   else star(x, y, r * 1.1, n === 2);
 }
 
+/* ══════════════════════════ 显示比例 ══════════════════════════
+   真实尺寸差有十几倍：步兵 1.8 米、虎式 3 米、古斯塔夫将近 5 米。照搬会把
+   步兵画成蚂蚁，全都一样大又没有分量感。取 (真实高 / 1.8) 的 0.55 次方 ——
+   坦克比人明显高一圈，攻城炮压得住场，步兵仍然看得清。
+
+   每个单位画出来多大是一笔一笔手画的，难免参差（校准之前四个版本的坦克
+   居然全都比步兵还矮）。所以启动时拿一个只记坐标的假 context 把每种单位
+   描一遍，量出它实际占多高，再反算该缩放多少 —— 以后改画法也不用手动
+   重算系数。sizeM 是"视觉占位高度"而不是严格的物理尺寸：骑兵举着长矛、
+   火炮扬着炮管，这些都算进人眼看到的那个块头里。 */
+const SIZE_REF = 1.8, SIZE_POW = .55;
+function calibrate() {
+  const b = { x0: 1e9, y0: 1e9, x1: -1e9, y1: -1e9 };
+  const T = (x, y) => {
+    if (!isFinite(x) || !isFinite(y)) return;
+    b.x0 = Math.min(b.x0, x); b.x1 = Math.max(b.x1, x);
+    b.y0 = Math.min(b.y0, y); b.y1 = Math.max(b.y1, y);
+  };
+  let lw = 1.7;
+  const probe = {
+    save() {}, restore() {}, beginPath() {}, stroke() {}, fill() {}, closePath() {},
+    setLineDash() {}, translate() {}, scale() {}, rotate() {}, fillText() {},
+    moveTo: T, lineTo: T,
+    arc(x, y, r) { T(x - r, y - r); T(x + r, y + r); },
+    ellipse(x, y, rx, ry) { T(x - rx, y - ry); T(x + rx, y + ry); },
+    quadraticCurveTo(a, c, x, y) { T(a, c); T(x, y); },
+    bezierCurveTo(a, c, d, e, x, y) { T(a, c); T(d, e); T(x, y); },
+    rect(x, y, w, h) { T(x, y); T(x + w, y + h); },
+    get lineWidth() { return lw; }, set lineWidth(v) { lw = v; },
+  };
+  for (const p of ['strokeStyle', 'fillStyle', 'globalAlpha', 'lineCap', 'lineJoin', 'font'])
+    Object.defineProperty(probe, p, { set() {}, get() { return ''; } });
+  const real = ctx, H = {};
+  for (const k of ALL) {
+    const d = UNITS[k];
+    d.gsc = 1;
+    if (!DRAW[k] || !d.sizeM) continue;
+    const u = { d, ph: 1.1, flash: 0, prone: 0, aimEl: .15, hp: d.hp, max: d.hp, sd: 7,
+      dropping: 0, face: 1, alt: d.alt || 0, wz: .5, wx: 0, side: 0, smokeT: 0,
+      bunker: null, dmgTrack: 0, turnT: 0, rank: 0, leg: 0, egress: 0, fuel: 9, tgt: null };
+    b.x0 = b.y0 = 1e9; b.x1 = b.y1 = -1e9; lw = 1.7;
+    ctx = probe; seed(11);
+    try { DRAW[k](u, 0); } catch (e) { ctx = real; continue; }
+    ctx = real;
+    if (b.y1 - b.y0 > 1) H[k] = b.y1 - b.y0;
+  }
+  /* 基准取步兵自己画出来的高度，而不是一个写死的像素数 —— 这样整体大小
+     保持原样，只是把各兵种之间的相对比例摆正 */
+  const base = H.inf;
+  if (!base) return;
+  for (const k of ALL) {
+    const d = UNITS[k];
+    if (H[k] && d.sizeM) d.gsc = base * Math.pow(d.sizeM / SIZE_REF, SIZE_POW) / H[k];
+  }
+}
+
 const DRAW = {
   /* ── 步兵 ── */
   inf(u, n) {
@@ -1790,7 +1846,7 @@ const DRAW = {
 };
 
 function drawUnit(u, alpha, dead) {
-  const q = proj(u.wx, u.wz, u.alt || 0), sc = scaleAt(q[2]);
+  const q = proj(u.wx, u.wz, u.alt || 0), sc = scaleAt(q[2]) * (u.d.gsc || 1);
   if (!dead || u.alt > 4) {
     const gy = gyAt(u.wz);
     ctx.save();
@@ -2472,6 +2528,7 @@ initArmies();
 const warmup = Math.min(+(new URLSearchParams(location.search).get('warmup') || 0), 180);
 if (warmup > 0) for (let i = 0, n = warmup / .016; i < n; i++) update(.016);
 
+calibrate();
 requestAnimationFrame(loop);
 setTimeout(() => { const h = $('hint'); h.style.transition = 'opacity 1s'; h.style.opacity = 0; }, 9000);
 </script>

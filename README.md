@@ -102,6 +102,14 @@ dull picture. What was needed was units that survive the first exchange, so both
 together: more health, assault units pushing to knife range, and minimum ranges on missiles so
 close-in fighting falls back to guns.
 
+**Unit scale is calibrated at startup, not hand-tuned.** Each unit is drawn by hand, stroke by
+stroke, so their sizes had drifted apart — before this was fixed, the tank was *shorter than the
+infantryman* in all four eras. Sizes now come from one rule: take the unit's real height, divide by
+1.8 m, raise it to the 0.55 power. Literal scale would turn infantry into ants; no scaling at all
+and nothing has any weight. On boot the game traces every unit once through a context that only
+records coordinates, measures how tall it actually draws, and solves for the correction — so
+redrawing a unit never means recomputing a constant by hand.
+
 **Armour needed a second tier before the numbers could be honest.** Every weapon had one
 anti-armour multiplier, and aircraft were flagged as armoured too — so the same number decided
 both *can this gun win a dogfight* and *can it pierce a tank*. Fighter guns had to be set high
