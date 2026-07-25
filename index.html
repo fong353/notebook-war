@@ -16,6 +16,10 @@
   #rot{display:flex;flex-direction:column;flex:1 1 auto;width:100%;min-height:0}
   body.ls #rot{position:fixed;top:0;left:0;transform-origin:0 0}
   #lsb{display:none}
+  button.nat{min-width:62px}
+  button.nat.pen{color:var(--paper);font-weight:bold}      /* 你正在画的一方 */
+  button.nat.foe{background:transparent;font-weight:bold}  /* 对手 */
+  button.nat.out{opacity:.42}                              /* 本局没上场 */
   a.era{
     font-size:11px;color:var(--ink);opacity:.45;text-decoration:none;
     border-bottom:1px dotted currentColor;margin-left:10px;white-space:nowrap;
@@ -52,12 +56,10 @@
   }
   button:hover{background:#ece5d0}
   button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-  button.side.blue.on{background:var(--blue);border-color:var(--blue)}
-  button.side.red.on{background:var(--red);border-color:var(--red)}
   button small{display:block;font-size:9px;opacity:.62;letter-spacing:-.2px}
   .row button{min-width:52px;padding:2px 6px;font-size:12px;white-space:nowrap}
   .row button.on{border-width:2.5px;background:var(--ink);color:var(--paper)}
-  /* 指令按钮：底部升起的冷却遮罩 */
+  /* Order buttons: a cooldown mask rising from the bottom */
   .cmd{border-style:solid;border-color:#8d8272}
   .cmd .cool{
     position:absolute;left:0;right:0;bottom:0;background:rgba(59,58,54,.24);
@@ -110,7 +112,7 @@
     <div id="bar"><i class="b" id="pb"></i><i class="r" id="pr"></i></div>
     <span class="sr" id="l1"><b id="nr">0</b> CCCP</span>
     <span class="vs" id="tide"></span>
-    <span class="vs">losses <span class="sr" id="lb">0</span>:<span class="sb" id="lr">0</span></span>
+    <span class="vs"><span id="lossLbl">losses</span> <span class="sr" id="lb">0</span>:<span class="sb" id="lr">0</span></span>
   </div>
 </header>
 
@@ -123,9 +125,10 @@
 
 <div id="hud">
   <div class="grp">
-    <button class="side blue on" data-side="0" id="s0">Wehrmacht</button>
-    <span class="vs">vs</span>
-    <button class="side red" data-side="1" id="s1">Red Army</button>
+    <span class="lbl" id="facLbl">Side</span>
+    <button class="nat" data-n="0">GER</button>
+    <button class="nat" data-n="1">USA</button>
+    <button class="nat" data-n="2">SOV</button>
   </div>
   <div class="grp col" id="tools">
     <div class="row" id="rowG"><span class="lbl">G</span></div>
@@ -135,9 +138,9 @@
     <div class="row" id="rowC"><span class="lbl">!</span></div>
     <div class="row">
       <button id="play" class="on">Pause</button><button id="spd">1×</button>
-      <button id="auto" class="on">Auto-balance</button><button id="snd">Sound</button>
+      <button id="auto" class="on">Auto-balance</button><button id="snd" class="on">Sound</button>
       <button id="grid" class="on">Grid</button><button id="lsb">Rotate</button>
-      <button id="clr">Restart</button>
+      <button id="clr">Restart</button><button id="langBtn" title="Language / 语言">中</button>
     </div>
   </div>
 </div>
@@ -145,13 +148,63 @@
 </div>
 <script>
 "use strict";
-/* ══════════════════════════ 手绘画笔 ══════════════════════════ */
+/* ══════════════════════════ SKETCH BRUSHES ══════════════════════════ */
 let _s = 1;
 const seed = n => { _s = (n | 0) || 1; };
 const sr = () => { _s = (_s * 1103515245 + 12345) & 0x7fffffff; return _s / 0x7fffffff; };
 const rnd = (a, b) => a + Math.random() * (b - a);
 const pick = a => a[(Math.random() * a.length) | 0];
 const clamp = (v, a, b) => v < a ? a : (v > b ? b : v);
+
+/* ══════════════════════════ LANGUAGE ══════════════════════════
+   Bilingual throughout: any user-facing string is written as [en, zh]
+   and read through L(). Falls back to English if a translation is missing. */
+let lang = 'en';
+try { lang = localStorage.getItem('mg_lang') || ((navigator.language || '').indexOf('zh') === 0 ? 'zh' : 'en'); } catch (e) { }
+const L = a => Array.isArray(a) ? (a[lang === 'zh' ? 1 : 0] || a[0]) : a;
+const UI = {
+  losses:   ['losses', '战损'],
+  pause:    ['Pause', '暂停'],      fight:    ['Fight', '开战'],
+  auto:     ['Auto-balance', '自动平衡'], sound: ['Sound', '音效'],
+  grid:     ['Grid', '网格'],       rotate:   ['Rotate', '横屏'],
+  portrait: ['Portrait', '竖屏'],   restart:  ['Restart', '重来'],
+  ground:   ['G', '陆'],            air:      ['A', '空'],  orders: ['!', '令'],
+  hint:     ['Drag to draw units　·　Click an order, then click the field　·　Space to pause',
+             '按住拖动＝画部队　·　点指令再点战场　·　空格暂停'],
+  pushing:  ['pushing', '攻势'],
+  wins:     ['WINS', '胜 利'],      mutual:  ['MUTUAL RUIN', '同 归 于 尽'],
+  hp:       ['HP', '血'],           kills:   ['kills', '战功'],
+  ammo:     ['ammo', '弹'],         reloading:['reloading', '装填中'],
+  heals:    ['heals allies', '治疗友军'],
+  resup:    ['unsuppress · faster reload', '解压制·快装填'],
+  supporting:[' (supporting)', '（正在支援）'],
+  suppressed:['suppressed', '压制'], prone: ['prone', '卧倒'],
+  inBunker: ['in bunker', '驻守碉堡'], inTrench: ['in trench', '壕沟内'],
+  withdraw: ['withdrawing', '撤退整补'], rtb: ['RTB', '返航中'],
+  fuel:     ['fuel', '油料'],       trackDmg:['track damaged', '履带受损'],
+  turretJam:['turret jammed', '炮塔卡滞'], rallied:['rallied', '受鼓舞'],
+  speed:    ['speed', '速'],        range:  ['range', '射程'],
+  reload:   ['reload', '装填'],     dmg:    ['dmg', '伤'],
+  splash:   ['splash', '溅射'],     vs:     ['vs', '对'],
+  vsG:      ['ground', '地'],       vsA:    ['air', '空'], vsGA: ['ground+air', '地空'],
+  support:  ['support', '支援'],
+  cooldown: ['cooldown', '冷却'],
+  aimHint:  ['Click the button, then click the field to aim', '点按钮后再点战场选位置'],
+  /* log templates */
+  lgDestroy:[' destroyed ', ' 击毁 '],
+  lgPromote:[' promoted to ', ' 晋升'],
+  lgRegroup:[' pulls back to regroup', ' 撤下整补'],
+  lgFuel:   [' RTB — out of fuel', ' 油尽返航'],
+  lgAmmo:   [' RTB — out of ammo', ' 弹尽返航'],
+  lgInit:   [' seizes the initiative', ' 转入攻势'],
+  lgStrike: [' calls in an air strike', ' 呼叫空袭'],
+  lgBarrage:[' requests a barrage', ' 请求炮火覆盖'],
+  lgReinf:  [' reinforcements arrive', ' 紧急增援抵达'],
+  lgRally:  [' rallies ', ' 全线鼓舞 '],  lgUnits: [' units', ' 部队'],
+  lgSmoke:  [' lays smoke', ' 施放烟幕'],
+  lgDrop:   [' airborne drop', ' 空降突击队'],
+};
+const T = k => L(UI[k]);
 
 const cv = document.getElementById('c');
 const mainCtx = cv.getContext('2d');
@@ -187,7 +240,7 @@ function rcirc(cx, cy, r, amp) {
   for (let i = 0; i <= n; i++) { const a = i / n * 6.2832; pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]); }
   rpoly(pts, true, amp === undefined ? 1.3 : amp);
 }
-/* 五角星：一笔连五个隔点，正好画出星形轮廓。美军空心、苏军补一道涂色 */
+/* Five-pointed star: connect every second point and the outline falls out. Hollow for the US, filled in for the USSR */
 function star(cx, cy, r, solid) {
   const pts = [];
   for (let i = 0; i < 5; i++) {
@@ -197,7 +250,7 @@ function star(cx, cy, r, solid) {
   rpoly(pts, true, .7);
   if (solid) { const lw = ctx.lineWidth; ctx.lineWidth = lw * .7; rline(cx - r * .5, cy, cx + r * .5, cy, .6); ctx.lineWidth = lw; }
 }
-/* 苏军统一的"涂色"手法：形状里补几道斜排线 */
+/* The Soviet "paint fill": a few diagonal strokes inside the shape */
 function sh(x, y, w, h, n) {
   n = n || 3;
   const lw = ctx.lineWidth; ctx.lineWidth = Math.max(.7, lw * .6);
@@ -205,10 +258,10 @@ function sh(x, y, w, h, n) {
   ctx.lineWidth = lw;
 }
 
-/* ══════════════════════════ 伪 3D 投影 ══════════════════════════
-   世界：wx 左右[0,WORLD_W] · wz 纵深[0近,1远] · alt 离地高度
-   作弊透视：屏幕 y 铺满整块地面、横向按真透视收缩，
-             但单位缩放只温和衰减 → 远处仍看得清                     */
+/* ══════════════════════════ FAKE 3D PROJECTION ══════════════════════════
+   World: wx across [0,WORLD_W] · wz depth [0 near, 1 far] · alt height above ground
+   Cheated perspective: screen y fills the whole ground, x contracts by true perspective,
+                        but unit scale only decays gently → the far rank stays readable  */
 const WORLD_W = 1400, DEPTH = 700, PERSP = 1.15, ALTK = 1.7;
 const P_MIN = 1 / (1 + PERSP);
 let FAR_Y = 0, BOT = 0, HZ = 0, XK = 1;
@@ -216,8 +269,8 @@ let SIZEK = 1.3;
 
 const persp = wz => 1 / (1 + wz * PERSP);
 const pnorm = p => (p - P_MIN) / (1 - P_MIN);
-/* 缩放压缩过的作弊透视：纯透视会把远处压到 0.47 倍（看不清了），
-   完全不压又显得一样大。取中间：远处约近处的 0.62 倍 */
+/* Compressed perspective scaling: true perspective squashes the far rank to 0.47
+   (unreadable); no scaling at all and depth disappears. Split it: far ≈ 0.62 of near */
 const scaleAt = p => (.28 + .72 * p) * SIZEK;
 function proj(wx, wz, alt) {
   const p = persp(wz);
@@ -253,70 +306,70 @@ function applyRot() {
 window.addEventListener('resize', applyRot);
 window.addEventListener('orientationchange', () => setTimeout(applyRot, 120));
 
-/* ══════════════════════════ 武器表 ══════════════════════════
-   武器是独立的东西，一个单位挂 1-2 门，各有射程/装填/弹药。
-   开火时按"对当前目标的单位时间有效伤害"自动挑一门。
-   vs[对装甲,对软] · acc 基础精度 · supp 压制力（火力压人不用命中）
-   溅射武器不判命中；ammo 只给机载武器                              */
+/* ══════════════════════════ WEAPONS ══════════════════════════
+   Weapons are their own thing. A unit carries 1-2, each with its own range/reload/ammo.
+   On firing it picks the one with the best expected damage per second against this target.
+   vs[armour, soft] · acc base accuracy · supp suppression (fire pins men without hitting)
+   Splash weapons skip the hit roll; ammo is only tracked for airborne weapons          */
 const WPN = {
-  rifle:    { name:'Rifle',        m:['Kar98k','M1 Garand','Mosin-Nagant'],            proj:'bullet', dmg:5,  rng:105, rof:.50, hits:'ga', vs:[.45,1],   acc:.68, supp:.07 },
-  grenade:  { name:'Grenade',      m:['Stielhandgranate','Mk.2 Grenade','RGD-33'],    proj:'bomb',   dmg:16, rng:58,  rof:4.5, hits:'g',  vs:[.6,1.4],  splash:26, supp:.3 },
-  hmg:      { name:'Machine Gun',  m:['MG42','M1919 Browning','DP-27'],         proj:'bullet', dmg:4,  rng:135, rof:.55, hits:'ga', vs:[.3,1.25], acc:.52, supp:.2,  burst:3 },
-  srifle:   { name:'Sniper Rifle', m:['Kar98k ZF39','M1903A4 Springfield','Mosin PU'],     proj:'bullet', dmg:30, rng:265, rof:2.2, hits:'g',  vs:[.12,3],   acc:.93, supp:.05 },
-  atTube:   { name:'AT Launcher',  m:['Panzerschreck','M9 Bazooka','PTRD-41'],      proj:'rocket', dmg:52, rng:150, rof:3.0, hits:'g',  vs:[2.2,.5],  acc:.82, supp:.12, minRng:30 },
-  tankGun:  { name:'Tank Gun',     m:['8.8cm KwK 36','75mm M3','76mm F-34'],       proj:'shell',  dmg:25, rng:185, rof:1.3, hits:'g',  vs:[1.2,1],   acc:.80, supp:.28 },
-  coax:     { name:'Coaxial MG',   m:['MG34','M1919A4','DT-29'],                   proj:'bullet', dmg:4,  rng:112, rof:.45, hits:'ga', vs:[.25,1.3], acc:.60, supp:.18, burst:3 },
-  htMg:     { name:'Vehicle MG',   m:['MG34 mount','M2 .50 cal','DShK 12.7'],           proj:'bullet', dmg:7,  rng:150, rof:.40, hits:'ga', vs:[.4,1.3],  acc:.58, supp:.24, burst:2 },
-  flakLt:   { name:'Light Flak',   m:['2cm Flakvierling 38','M45 Quad .50','61-K 37mm'], proj:'flak', dmg:16, rng:200, rof:.42, hits:'a', vs:[1,1], acc:.50, supp:.06, burst:3 },
-  flak88:   { name:'Heavy Flak',   m:['8.8cm Flak 36','90mm M1','52-K 85mm'],      proj:'shell',  dmg:60, rng:360, rof:2.8, hits:'ga', vs:[1.8,1.1], acc:.84, supp:.3 },
-  howitzer: { name:'Howitzer',     m:['15cm sFH 18','105mm M101','122mm M-30'],    proj:'bomb',   dmg:40, rng:400, rof:3.0, hits:'g',  vs:[1,1.2],   splash:56, supp:.55 },
-  mlrsSalvo:{ name:'Rocket Salvo', m:['15cm Nebelwerfer 41','4.5in T34','132mm M-13'], proj:'rocket', dmg:24, rng:430, rof:6.0, hits:'g', vs:[.8,1.4], splash:44, supp:.45, burst:6 },
-  /* 机载：二战没有制导武器，全是机炮和铁炸弹 */
-  fighterGun:{name:'Wing Guns',    m:['MG151/20','6× M2 .50 cal','ShVAK 20mm'],        proj:'bullet', dmg:16, rng:140, rof:.50, hits:'ga', vs:[.7,1],    acc:.66, supp:.28, ammo:36, burst:2 },
-  attackGun:{ name:'Strafing Guns',m:['MG17 + 37mm','8× M2 .50 cal','VYa-23'],         proj:'bullet', dmg:28, rng:130, rof:.34, hits:'g',  vs:[1.5,1.1], acc:.62, supp:.66, ammo:48, burst:2 },
-  agRocket: { name:'Air Rockets',  m:['Wfr.Gr.21','HVAR 5in','RS-82'],            proj:'rocket', dmg:22, rng:170, rof:2.2, hits:'g',  vs:[.9,1.2],  splash:30, supp:.4, burst:4, ammo:6 },
-  bombLoad: { name:'Bombs',        m:['SC 250','M64 500lb','FAB-100'],            proj:'drop',   dmg:56, rng:88,  rof:2.6, hits:'g',  vs:[1,1.2],   splash:70, supp:.7, burst:2, ammo:5 },
+  rifle:    { name:['Rifle','步枪'],          m:[['Kar98k','Kar98k'],['M1 Garand','M1 加兰德'],['Mosin-Nagant','莫辛纳甘']],                          proj:'bullet', dmg:5,  rng:105, rof:.50, hits:'ga', vs:[.45,1],   acc:.68, supp:.07 },
+  grenade:  { name:['Grenade','手榴弹'],      m:[['Stielhandgranate','长柄手榴弹'],['Mk.2 Grenade','Mk.2 手雷'],['RGD-33','RGD-33']],                proj:'bomb',   dmg:16, rng:58,  rof:4.5, hits:'g',  vs:[.6,1.4],  splash:26, supp:.3 },
+  hmg:      { name:['Machine Gun','重机枪'],  m:[['MG42','MG42'],['M1919 Browning','M1919 勃朗宁'],['DP-27','DP-27 转盘']],                          proj:'bullet', dmg:4,  rng:135, rof:.55, hits:'ga', vs:[.3,1.25], acc:.52, supp:.2,  burst:3 },
+  srifle:   { name:['Sniper Rifle','狙击枪'], m:[['Kar98k ZF39','Kar98k ZF39'],['M1903A4 Springfield','M1903A4 春田'],['Mosin PU','莫辛 PU']],       proj:'bullet', dmg:30, rng:265, rof:2.2, hits:'g',  vs:[.12,3],   acc:.93, supp:.05 },
+  atTube:   { name:['AT Launcher','反坦克筒'],m:[['Panzerschreck','Panzerschreck'],['M9 Bazooka','M9 巴祖卡'],['PTRD-41','PTRD-41']],                proj:'rocket', dmg:52, rng:150, rof:3.0, hits:'g',  vs:[2.2,.5],  acc:.82, supp:.12, minRng:30 },
+  tankGun:  { name:['Tank Gun','坦克炮'],     m:[['8.8cm KwK 36','8.8cm KwK 36'],['75mm M3','75mm M3'],['76mm F-34','76mm F-34']],                   proj:'shell',  dmg:25, rng:185, rof:1.3, hits:'g',  vs:[1.2,1],   acc:.80, supp:.28 },
+  coax:     { name:['Coaxial MG','同轴机枪'], m:[['MG34','MG34'],['M1919A4','M1919A4'],['DT-29','DT-29']],                                           proj:'bullet', dmg:4,  rng:112, rof:.45, hits:'ga', vs:[.25,1.3], acc:.60, supp:.18, burst:3 },
+  htMg:     { name:['Vehicle MG','车载机枪'], m:[['MG34 mount','MG34 车载'],['M2 .50 cal','M2 .50'],['DShK 12.7','DShK 12.7']],                      proj:'bullet', dmg:7,  rng:150, rof:.40, hits:'ga', vs:[.4,1.3],  acc:.58, supp:.24, burst:2 },
+  flakLt:   { name:['Light Flak','轻高炮'],   m:[['2cm Flakvierling 38','2cm 四联高炮'],['M45 Quad .50','M45 四联 .50'],['61-K 37mm','61-K 37mm']],  proj:'flak',   dmg:16, rng:200, rof:.42, hits:'a',  vs:[1,1],     acc:.50, supp:.06, burst:3 },
+  flak88:   { name:['Heavy Flak','重高炮'],   m:[['8.8cm Flak 36','8.8cm Flak 36'],['90mm M1','90mm M1'],['52-K 85mm','52-K 85mm']],                 proj:'shell',  dmg:60, rng:360, rof:2.8, hits:'ga', vs:[1.8,1.1], acc:.84, supp:.3 },
+  howitzer: { name:['Howitzer','榴弹炮'],     m:[['15cm sFH 18','15cm sFH 18'],['105mm M101','105mm M101'],['122mm M-30','122mm M-30']],             proj:'bomb',   dmg:40, rng:400, rof:3.0, hits:'g',  vs:[1,1.2],   splash:56, supp:.55 },
+  mlrsSalvo:{ name:['Rocket Salvo','火箭齐射'],m:[['15cm Nebelwerfer 41','15cm 烟雾发射器'],['4.5in T34','4.5 吋 T34'],['132mm M-13','132mm M-13']], proj:'rocket', dmg:24, rng:430, rof:6.0, hits:'g',  vs:[.8,1.4],  splash:44, supp:.45, burst:6 },
+  /* Airborne: no guided weapons in WW2 — just guns and iron bombs */
+  fighterGun:{name:['Wing Guns','机翼武器'],  m:[['MG151/20','MG151/20'],['6× M2 .50 cal','6×M2 .50'],['ShVAK 20mm','ShVAK 20mm']],                  proj:'bullet', dmg:16, rng:140, rof:.50, hits:'ga', vs:[.7,1],    acc:.66, supp:.28, ammo:36, burst:2 },
+  attackGun:{ name:['Strafing Guns','扫射机炮'],m:[['MG17 + 37mm','MG17 + 37mm'],['8× M2 .50 cal','8×M2 .50'],['VYa-23','VYa-23']],                  proj:'bullet', dmg:28, rng:130, rof:.34, hits:'g',  vs:[1.5,1.1], acc:.62, supp:.66, ammo:48, burst:2 },
+  agRocket: { name:['Air Rockets','对地火箭'],m:[['Wfr.Gr.21','Wfr.Gr.21'],['HVAR 5in','HVAR 5 吋'],['RS-82','RS-82']],                              proj:'rocket', dmg:22, rng:170, rof:2.2, hits:'g',  vs:[.9,1.2],  splash:30, supp:.4, burst:4, ammo:6 },
+  bombLoad: { name:['Bombs','航弹'],          m:[['SC 250','SC 250'],['M64 500lb','M64 500 磅'],['FAB-100','FAB-100']],                              proj:'drop',   dmg:56, rng:88,  rof:2.6, hits:'g',  vs:[1,1.2],   splash:70, supp:.7, burst:2, ammo:5 },
 };
 
-/* ══════════════════════════ 编制表 ══════════════════════════
-   抗压制(morale)、撤退阈值(grit)、突击性(aggr) 都不再逐个手写，
-   由 armor / support / 射程派生 —— 见下面的预处理                     */
+/* ══════════════════════════ UNIT TYPES ══════════════════════════
+   Suppression resistance (morale), withdraw threshold (grit) and assault behaviour (aggr)
+   are no longer written out per unit — they are derived below from armor/support/range  */
 const UNITS = {
-  inf:   { name:'Infantry', sub:'Rifle + grenade', k:'1', m:['Wehrmacht Infantry','GI Rifleman','Red Army Infantry'],           layer:'g', hp:34,  spd:26, armor:0, h:24, w:['rifle','grenade'],   aggr:1, weight:30 },
-  mg:    { name:'MG Team',  sub:'Suppressing fire', k:'2', m:['MG42 Team','Browning Team','DP Team'],    layer:'g', hp:46,  spd:15, armor:0, h:18, w:['hmg'],               aggr:1, weight:16 },
-  sniper:{ name:'Sniper',   sub:'Anti-infantry', k:'3', m:['Scharfschütze','US Sniper','Snayper'],          layer:'g', hp:26,  spd:18, armor:0, h:12, w:['srifle'],            weight:8 },
-  atgm:  { name:'AT Team',  sub:'Launcher + rifle', k:'4', m:['Panzerjäger','Bazooka Team','AT Rifle Team'],     layer:'g', hp:40,  spd:15, armor:0, h:22, w:['atTube','rifle'],    aggr:1, weight:11 },
-  tank:  { name:'Tank',     sub:'Main gun + coax', k:'5', m:['Pz.VI Tiger','M4 Sherman','T-34/76'],          layer:'g', hp:195, spd:15, armor:1, h:16, w:['tankGun','coax'],    aggr:1, weight:18 },
-  ifv:   { name:'Halftrack',sub:'Transport + MG', k:'6', m:['Sd.Kfz.251','M3 Halftrack','ZiS-5 Truck'],     layer:'g', hp:100, spd:31, armor:1, h:14, w:['htMg'],             aggr:1, weight:14 },
-  aa:    { name:'Light AA', sub:'Close-range flak', k:'7', m:['Flakvierling 38','M45 Quad','61-K'],         layer:'g', hp:95,  spd:12, armor:1, h:16, w:['flakLt'], hold:190,  weight:11 },
-  sam:   { name:'Heavy AA', sub:'Flak + AT', k:'8', m:['8.8cm Flak 36','90mm M1','52-K 85mm'],       layer:'g', hp:88,  spd:10, armor:1, h:18, w:['flak88'], hold:300,  weight:9 },
-  arty:  { name:'Howitzer', sub:'Long-range splash', k:'9', m:['15cm sFH 18','105mm M101','122mm M-30'],     layer:'g', hp:105, spd:8,  armor:1, h:16, w:['howitzer'],          weight:9 },
-  mlrs:  { name:'Rockets',  sub:'6-round salvo', k:'0', m:['Nebelwerfer 41','T34 Calliope','BM-13 Katyusha'], layer:'g', hp:92, spd:7, armor:1, h:18, w:['mlrsSalvo'],       weight:7 },
-  supply:{ name:'Supply',   sub:'Unsuppress + reload', k:'u', m:['Opel Blitz','GMC CCKW','ZiS-5 Supply'],       layer:'g', hp:80, spd:20, armor:1, h:16, w:[], hold:250, support:'supply', weight:8 },
-  medic: { name:'Medic',    sub:'Heals wounded', k:'i', m:['Sanitäter','US Medic','Saninstruktor'],         layer:'g', hp:36,  spd:24, armor:0, h:22, w:[], hold:190, support:'medic',  weight:8 },
-  /* 伞兵：投下来时挂在伞上慢慢飘，落地收伞才算能打。weight 0 = 不进自动增援池，
-     只能靠"空降"指令或手动投放，免得凭空出现在地面上 */
-  para:  { name:'Paratrooper', sub:'Airborne · elite', k:'p', m:['Fallschirmjäger','82nd Airborne','VDV Airborne'],   layer:'g', hp:44,  spd:28, armor:0, h:24, w:['rifle','grenade'], aggr:1, weight:0 },
+  inf:   { name:['Infantry','步兵'],     sub:['Rifle + grenade','步枪+手榴弹'],  k:'1', m:[['Wehrmacht Infantry','国防军步兵'],['GI Rifleman','GI 步兵'],['Red Army Infantry','红军步兵']],           layer:'g', hp:34,  spd:26, armor:0, h:24, w:['rifle','grenade'],   aggr:1, weight:30 },
+  mg:    { name:['MG Team','机枪组'],    sub:['Suppressing fire','压制射击'],    k:'2', m:[['MG42 Team','MG42 机枪组'],['Browning Team','勃朗宁机枪组'],['DP Team','DP 机枪组']],                     layer:'g', hp:46,  spd:15, armor:0, h:18, w:['hmg'],               aggr:1, weight:16 },
+  sniper:{ name:['Sniper','狙击手'],     sub:['Anti-infantry','专杀步兵'],       k:'3', m:[['Scharfschütze','德军狙击手'],['US Sniper','美军狙击手'],['Snayper','苏军狙击手']],                       layer:'g', hp:26,  spd:18, armor:0, h:12, w:['srifle'],            weight:8 },
+  atgm:  { name:['AT Team','反坦克组'],  sub:['Launcher + rifle','火箭筒+步枪'], k:'4', m:[['Panzerjäger','装甲猎兵'],['Bazooka Team','巴祖卡小组'],['AT Rifle Team','反坦克枪组']],                  layer:'g', hp:40,  spd:15, armor:0, h:22, w:['atTube','rifle'],    aggr:1, weight:11 },
+  tank:  { name:['Tank','坦克'],         sub:['Main gun + coax','主炮+同轴枪'],  k:'5', m:[['Pz.VI Tiger','Pz.VI 虎式'],['M4 Sherman','M4 谢尔曼'],['T-34/76','T-34/76']],                            layer:'g', hp:195, spd:15, armor:1, h:16, w:['tankGun','coax'],    aggr:1, weight:18 },
+  ifv:   { name:['Halftrack','装甲车'],  sub:['Transport + MG','载具·车载枪'],   k:'6', m:[['Sd.Kfz.251','Sd.Kfz.251'],['M3 Halftrack','M3 半履带车'],['ZiS-5 Truck','ZiS-5 卡车']],                  layer:'g', hp:100, spd:31, armor:1, h:14, w:['htMg'],             aggr:1, weight:14 },
+  aa:    { name:['Light AA','轻高炮'],   sub:['Close-range flak','近程弹幕'],    k:'7', m:[['Flakvierling 38','四联高炮 38'],['M45 Quad','M45 四联'],['61-K','61-K']],                                layer:'g', hp:95,  spd:12, armor:1, h:16, w:['flakLt'], hold:190,  weight:11 },
+  sam:   { name:['Heavy AA','重高炮'],   sub:['Flak + AT','对空·打坦克'],        k:'8', m:[['8.8cm Flak 36','8.8cm Flak 36'],['90mm M1','90mm M1'],['52-K 85mm','52-K 85mm']],                        layer:'g', hp:88,  spd:10, armor:1, h:18, w:['flak88'], hold:300,  weight:9 },
+  arty:  { name:['Howitzer','榴弹炮'],   sub:['Long-range splash','超远溅射'],   k:'9', m:[['15cm sFH 18','15cm sFH 18'],['105mm M101','105mm M101'],['122mm M-30','122mm M-30']],                    layer:'g', hp:105, spd:8,  armor:1, h:16, w:['howitzer'],          weight:9 },
+  mlrs:  { name:['Rockets','火箭炮'],    sub:['6-round salvo','6发齐射'],        k:'0', m:[['Nebelwerfer 41','烟雾发射器 41'],['T34 Calliope','T34 卡利俄佩'],['BM-13 Katyusha','BM-13 喀秋莎']],     layer:'g', hp:92,  spd:7,  armor:1, h:18, w:['mlrsSalvo'],         weight:7 },
+  supply:{ name:['Supply','补给车'],     sub:['Unsuppress + reload','解压制·快装填'], k:'u', m:[['Opel Blitz','欧宝闪电'],['GMC CCKW','GMC CCKW'],['ZiS-5 Supply','ZiS-5 补给车']],                   layer:'g', hp:80,  spd:20, armor:1, h:16, w:[], hold:250, support:'supply', weight:8 },
+  medic: { name:['Medic','卫生兵'],      sub:['Heals wounded','救治伤员'],       k:'i', m:[['Sanitäter','德军卫生兵'],['US Medic','美军医护兵'],['Saninstruktor','卫生指导员']],                       layer:'g', hp:36,  spd:24, armor:0, h:22, w:[], hold:190, support:'medic',  weight:8 },
+  /* Paratroopers drift down under canopy and only fight once they land. weight 0 keeps them
+     out of the reinforcement pool, so they never just appear on the ground */
+  para:  { name:['Paratrooper','伞兵'],  sub:['Airborne · elite','空降·精锐'],   k:'p', m:[['Fallschirmjäger','德军伞兵'],['82nd Airborne','82 空降师'],['VDV Airborne','苏军空降兵']],              layer:'g', hp:44,  spd:28, armor:0, h:24, w:['rifle','grenade'], aggr:1, weight:0 },
 
-  fig:   { name:'Fighter',  sub:'Guns · dogfight', k:'q', m:['Bf 109G','P-51D Mustang','Yak-3'],              layer:'a', hp:72,  spd:66, armor:1, h:12, w:['fighterGun'],        alt:250, fuel:55, weight:13 },
-  atk:   { name:'Dive Bomber', sub:'Strafe + rockets', k:'w', m:['Ju 87 Stuka','P-47D Thunderbolt','Il-2 Sturmovik'], layer:'a', hp:118, spd:46, armor:1, h:14, w:['attackGun','agRocket'], alt:95, fuel:50, weight:12 },
-  bmb:   { name:'Bomber',   sub:'Carpet bombing', k:'r', m:['He 111','B-17G Flying Fortress','Pe-2'],            layer:'a', hp:155, spd:36, armor:1, h:16, w:['bombLoad'],          alt:175, fuel:52, weight:9 },
+  fig:   { name:['Fighter','战斗机'],    sub:['Guns · dogfight','机枪·缠斗'],    k:'q', m:[['Bf 109G','Bf 109G'],['P-51D Mustang','P-51D 野马'],['Yak-3','Yak-3']],                                   layer:'a', hp:72,  spd:66, armor:1, h:12, w:['fighterGun'],        alt:250, fuel:55, weight:13 },
+  atk:   { name:['Dive Bomber','俯冲轰炸'],sub:['Strafe + rockets','扫射+火箭'], k:'w', m:[['Ju 87 Stuka','Ju 87 斯图卡'],['P-47D Thunderbolt','P-47D 雷电'],['Il-2 Sturmovik','Il-2 施图莫维克']],   layer:'a', hp:118, spd:46, armor:1, h:14, w:['attackGun','agRocket'], alt:95, fuel:50, weight:12 },
+  bmb:   { name:['Bomber','轰炸机'],     sub:['Carpet bombing','地毯轰炸'],      k:'r', m:[['He 111','He 111'],['B-17G Flying Fortress','B-17G 空中堡垒'],['Pe-2','Pe-2']],                           layer:'a', hp:155, spd:36, armor:1, h:16, w:['bombLoad'],          alt:175, fuel:52, weight:9 },
 };
 
 const K = WORLD_W / 800;
-const ROF_K = 1.9;          // 装填时间统一放慢，让每一发看得清、血条掉得住
-/* 观赏性的关键不是把射速调到没动静，而是让单位活得住：
-   弹药照样密集横飞，但一照面死不了，双方才会缠在一起打。 */
+const ROF_K = 1.9;          // Global reload multiplier: individual shots were too fast to follow
+/* What makes a battle watchable is not a slow rate of fire — that just makes a dull picture.
+   It is units that survive the first exchange, so both sides stay tangled together. */
 const TOUGH = 2.8;
 for (const n in WPN) {
   const w = WPN[n];
   w.id = n; w.rng *= K;
   if (w.splash) w.splash *= K;
-  w.minRng = (w.minRng || 0) * K;      // 导弹有最小射程，贴身了只能用机炮 → 逼出缠斗
+  w.minRng = (w.minRng || 0) * K;      // Missiles have a minimum range → knife fights fall back on guns
   if (w.acc === undefined) w.acc = 1;
   if (w.supp === undefined) w.supp = .1;
-  w.supp *= 2.4;            // 兵力压到 17 后交火更散，压制力再补一档
-  w.rof *= ROF_K;           // 全局装填倍率：射速太快看不清单发，整体放慢
+  w.supp *= 2.4;            // With only 17 a side the firefight is sparse; push suppression back up
+  w.rof *= ROF_K;
 }
 for (const k in UNITS) {
   const d = UNITS[k];
@@ -331,46 +384,46 @@ for (const k in UNITS) {
              (d.ws.some(w => w.hits.indexOf('a') >= 0) ? 'a' : '');
   d.dps = d.ws.reduce((s, w) => s + w.dmg * (w.burst || 1) / w.rof, 0);
   d.hasAmmo = d.ws.some(w => w.ammo !== undefined);
-  /* 派生性格，不再逐个手写：
-     · 抗压制：铁皮里的人比露天的沉得住气
-     · 撤退阈值：支援车最先溜，装甲最后退，飞机不撤（走返航）
-     · 突击性：射程短的自然得贴上去打，远程的留在后面 */
+  /* Derived personality, rather than a hand-written column per unit:
+     · suppression resistance: men behind armour keep their heads better
+     · withdraw threshold: support trucks bail first, armour last, aircraft never (they RTB)
+     · assault: short-ranged units have to close in; long-ranged ones stay back */
   d.morale = d.armor ? 1.6 : 1;
   d.grit = d.layer === 'a' ? 0 : (d.support ? .5 : (d.armor ? .2 : .3));
-  d.aggr = !!d.aggr;                      // 显式标记：主武器是近战的才顶上去
-  if (d.layer === 'a' && !d.wing) d.wing = 'fixed';   // 只有旋翼能悬停
+  d.aggr = !!d.aggr;                      // Explicit: only units whose main weapon is short-ranged push in
+  if (d.layer === 'a' && !d.wing) d.wing = 'fixed';   // Only rotors may hover
 }
 const GROUND = ['inf','mg','sniper','atgm','tank','ifv','aa','sam','arty','mlrs','supply','medic','para'];
 const AIR = ['fig','atk','bmb'];
 const ALL = GROUND.concat(AIR);
-/* 二战三国，每局挑两家对打。match[side] → NATIONS 下标 */
+/* Three WW2 nations, two of them per match. match[side] → index into NATIONS */
 const NATIONS = [
-  { id: 'ger', name: 'Wehrmacht', short: 'GER',  col: '#4a5568', mark: 'cross' },   // 铁十字·钢灰
-  { id: 'usa', name: 'US Army', short: 'USA',  col: '#5c6b34', mark: 'star' },    // 白星·橄榄绿
-  { id: 'sov', name: 'Red Army', short: 'RKKA', col: '#b7332f', mark: 'redstar' }, // 红星·苏联红
+  { id: 'ger', name: ['Wehrmacht','德军'], short: 'GER',  col: '#4a5568', mark: 'cross' },   // Balkenkreuz · field grey
+  { id: 'usa', name: ['US Army','美军'], short: 'USA',  col: '#5c6b34', mark: 'star' },    // White star · olive drab
+  { id: 'sov', name: ['Red Army','苏军'], short: 'RKKA', col: '#b7332f', mark: 'redstar' }, // Red star · Soviet red
 ];
-let match = [0, 2];                           // 默认 德 vs 苏
+let match = [0, 2];                           // Default: Wehrmacht vs Red Army
 const nat = s => NATIONS[match[s]];
 const sideCol = s => NATIONS[match[s]].col;
-const sideName = s => NATIONS[match[s]].name;
-const natIdx = s => match[s];                 // 0 德 / 1 美 / 2 苏，绘制时分支用
-const RANK_NAME = ['', 'Veteran', 'Elite'];
+const sideName = s => L(NATIONS[match[s]].name);
+const natIdx = s => match[s];                 // 0 GER / 1 USA / 2 SOV — branch on this when drawing
+const RANK_NAME = [['',''], ['Veteran','老兵'], ['Elite','精锐']];
 const SLOW = .5;
 
-/* ══════════════════════════ 状态 ══════════════════════════ */
-/* works = 地图预设的工事（壕沟 / 碉堡），只有步兵用得上，车辆照常开过去。
-   弹坑不再算掩体 —— 那是打出来的坑，不该等于修好的阵地 */
+/* ══════════════════════════ STATE ══════════════════════════ */
+/* works = prepared positions on the map (trenches / bunkers). Infantry only; vehicles drive over them.
+   Craters no longer count as cover — a hole blown in the ground is not a dug-in position */
 let units = [], projs = [], fx = [], wrecks = [], smokes = [], works = [];
 let uid = 1, lost = [0, 0];
-let running = true, speed = 1, autoRe = true, sound = false, showGrid = true;
+let running = true, speed = 1, autoRe = true, sound = true, showGrid = true;
 let curSide = 0, curTool = 'inf';
 let over = false, reTimer = 0, tick = 0, shake = 0;
 let logs = [], lastFavored = -1;
-/* 每方目标编制。默认 17 是"看得清谁在打谁"的值；
-   ?units=40 之类可以摆出大军对峙的场面（截图、演示用） */
+/* Target strength per side. 17 is the value where you can still tell who is shooting whom;
+   ?units=40 and the like stage a mass engagement (screenshots, demos) */
 let FIELD_TARGET = clamp(+(new URLSearchParams(location.search).get('units') || 17), 4, 60);
 
-/* ══════════════════════════ 纸 & 伤痕层 ══════════════════════════ */
+/* ══════════════════════════ PAPER & SCAR LAYER ══════════════════════════ */
 let paper = null, scars = null, scarFade = 0;
 function drawPaper() {
   if (!paper || paper.width !== cv.width || paper.grid !== showGrid) {
@@ -423,14 +476,14 @@ function drawPaper() {
     ctx = mainCtx;
   }
   mainCtx.drawImage(paper, 0, 0, W, H);
-  if (!scars) {                                  // 伤痕层：弹坑一发发涂上去，永久留在纸上
+  if (!scars) {                                  // Scar layer: craters are painted on once and stay on the paper
     scars = document.createElement('canvas');
     scars.width = cv.width; scars.height = cv.height;
     scars.getContext('2d').setTransform(DPR, 0, 0, DPR, 0, 0);
   }
   mainCtx.drawImage(scars, 0, 0, W, H);
 }
-/* 在伤痕层上戳一个弹坑 */
+/* Punch a crater into the scar layer */
 function scarCrater(wx, wz, r) {
   if (!scars) return;
   const q = proj(wx, wz, 0), sc = scaleAt(q[2]);
@@ -446,7 +499,7 @@ function scarCrater(wx, wz, r) {
     pts.push([q[0] + Math.cos(a) * k, q[1] + Math.sin(a) * k * .42]);
   }
   rpoly(pts, true, 2.2);
-  ctx.globalAlpha = .16; ctx.lineWidth = 1;       // 坑底涂抹
+  ctx.globalAlpha = .16; ctx.lineWidth = 1;       // Scribble across the crater floor
   for (let i = 0; i < 5; i++) {
     const y = q[1] - rr * .16 + i * rr * .08;
     rline(q[0] - rr * .66, y, q[0] + rr * .66, y + rnd(-1, 1), 1.4);
@@ -455,7 +508,7 @@ function scarCrater(wx, wz, r) {
   ctx = save;
 }
 
-/* ══════════════════════════ 生成 ══════════════════════════ */
+/* ══════════════════════════ SPAWNING ══════════════════════════ */
 function spawn(side, key, wx, wz) {
   const d = UNITS[key];
   const u = {
@@ -472,7 +525,7 @@ function spawn(side, key, wx, wz) {
     mode: 0, aimEl: 0, boost: 0, cover: null, link: null, smokeT: 0,
     turnT: 0, orb: Math.random() * 6.3, leg: 0, egress: 0, bunker: null, dropping: 0,
   };
-  if (key === 'para') { u.alt = 300; u.dropping = 1; u.rank = 1; }   // 空降兵按精锐起步
+  if (key === 'para') { u.alt = 300; u.dropping = 1; u.rank = 1; }   // Airborne troops start as veterans
   units.push(u);
   return u;
 }
@@ -514,12 +567,12 @@ function reinforce(side, key) {
 }
 function initArmies() {
   const plan = ['inf','inf','inf','mg','sniper','tank','ifv','atgm','aa','sam',
-                'arty','supply','medic','fig','atk','bmb'];     // 开局就别摆太满
+                'arty','supply','medic','fig','atk','bmb'];     // Don't crowd the opening deployment
   plan.forEach(k => {
     spawn(0, k, rnd(20, WORLD_W * .26), rnd(.05, .95));
     spawn(1, k, rnd(WORLD_W * .74, WORLD_W - 20), rnd(.05, .95));
   });
-  /* 地图工事：横跨战场的壕沟 + 少数可进驻的碉堡。只有步兵用得上 */
+  /* Map works: trenches spread across the field plus a few bunkers you can garrison. Infantry only */
   works.length = 0;
   for (let i = 0; i < 7; i++)
     works.push({ kind: 'trench', wx: 180 + i * (WORLD_W - 360) / 6 + rnd(-45, 45),
@@ -529,12 +582,13 @@ function initArmies() {
                  r: 34 * K, cap: 2, users: [], sd: (Math.random() * 1e6) | 0 });
 }
 
-/* ══════════════════════════ 音效 ══════════════════════════ */
+/* ══════════════════════════ SOUND ══════════════════════════ */
 let AC = null;
 function beep(type) {
   if (!sound) return;
   try {
     AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === 'suspended') AC.resume();       // 浏览器要等用户先交互过
     const t = AC.currentTime, g = AC.createGain();
     g.connect(AC.destination);
     if (type === 'boom') {
@@ -543,7 +597,7 @@ function beep(type) {
       const s = AC.createBufferSource(); s.buffer = b;
       const f = AC.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 620;
       s.connect(f); f.connect(g); g.gain.value = .18; s.start(t);
-    } else if (type === 'ric') {                  // 跳弹：一声脆响滑音
+    } else if (type === 'ric') {                  // Ricochet: a sharp downward chirp
       const o = AC.createOscillator();
       o.type = 'triangle';
       o.frequency.setValueAtTime(1800, t);
@@ -696,7 +750,7 @@ function update(dt) {
       const sway = Math.abs(tide);
       if (favored !== lastFavored && sway > .35) {
         lastFavored = favored;
-        pushLog(sideName(favored) + ' seizes the initiative');
+        pushLog(sideName(favored) + T('lgInit'));
       }
       for (let s = 0; s < 2; s++) {
         if (cap[s] >= TARGET) continue;
@@ -742,7 +796,7 @@ function update(dt) {
     /* 伤重后撤：退到后方整补，缓回血，好了再上。老兵更早开溜（会保命） */
     if (!air && u.d.grit > 0) {
       const th = u.d.grit * (1 + u.rank * .22);
-      if (u.mode === 0 && frac < th) { u.mode = 1; if (u.rank) pushLog(sideName(u.side) + ' ' + u.d.name + ' pulls back to regroup'); }
+      if (u.mode === 0 && frac < th) { u.mode = 1; if (u.rank) pushLog(sideName(u.side) + ' ' + L(u.d.name) + T('lgRegroup')); }
       if (u.mode === 1) {
         u.hp = Math.min(u.max, u.hp + u.max * (u.medicated ? .085 : .035) * dt);
         if (frac > .72) u.mode = 0;
@@ -768,7 +822,7 @@ function update(dt) {
         u.fuel -= dt;
         if (!u.rtb && (u.fuel <= 0 || outOfAmmo(u))) {
           u.rtb = 1;
-          pushLog(sideName(u.side) + ' ' + u.d.name + (u.fuel <= 0 ? ' RTB — out of fuel' : ' RTB — out of ammo'));
+          pushLog(sideName(u.side) + ' ' + L(u.d.name) + (u.fuel <= 0 ? T('lgFuel') : T('lgAmmo')));
         }
       }
       if (u.rtb) {
@@ -1007,10 +1061,10 @@ function update(dt) {
           const nr = kr.vet >= 5 ? 2 : (kr.vet >= 2 ? 1 : 0);   // 缠斗后击杀变稀，门槛跟着降
           if (nr > kr.rank) {
             kr.rank = nr;
-            pushLog(sideName(kr.side) + ' ' + kr.d.name + ' promoted to ' + RANK_NAME[nr]);
+            pushLog(sideName(kr.side) + ' ' + L(kr.d.name) + T('lgPromote') + L(RANK_NAME[nr]));
           }
-          pushLog(sideName(kr.side) + ' ' + (kr.rank ? RANK_NAME[kr.rank] + ' ' : '') + kr.d.name +
-                  ' destroyed ' + sideName(u.side) + ' ' + u.d.name);
+          pushLog(sideName(kr.side) + ' ' + (kr.rank ? L(RANK_NAME[kr.rank]) + ' ' : '') + L(kr.d.name) +
+                  T('lgDestroy') + sideName(u.side) + ' ' + L(u.d.name));
         }
       }
     }
@@ -1023,7 +1077,7 @@ function update(dt) {
     if (nb === 0 || nr === 0) {
       over = true; running = false;
       const win = nb > 0 ? 0 : (nr > 0 ? 1 : -1);
-      showBanner(win < 0 ? 'MUTUAL RUIN' : sideName(win) + ' WINS', win < 0 ? '#3b3a36' : sideCol(win));
+      showBanner(win < 0 ? T('mutual') : sideName(win) + ' ' + T('wins'), win < 0 ? '#3b3a36' : sideCol(win));
     }
   }
 }
@@ -1133,12 +1187,12 @@ const boom = (wx, wz, alt, r) => fx.push({ k: 'boom', wx, wz, alt, r, t: 0, dur:
 
 /* ══════════════════════════ 指挥官指令 ══════════════════════════ */
 const CMDS = [
-  { id:'strike',  name:'Strike',  tip:'A bomber flight sweeps through, laying bombs along a line', cd:26, aim:1 },
-  { id:'barrage', name:'Barrage', tip:'12 howitzer shells walk across the target area',            cd:20, aim:1 },
-  { id:'reinf',   name:'Reinforce', tip:'Commit a batch of units from the rear immediately',       cd:16, aim:0 },
-  { id:'rally',   name:'Rally',   tip:'Clears suppression, +speed and rate of fire for 7s',        cd:30, aim:1 },
-  { id:'smoke',   name:'Smoke',   tip:'Lays smoke; enemy accuracy into it drops hard',             cd:18, aim:1 },
-  { id:'airdrop', name:'Airdrop', tip:'Transport drops a paratrooper stick (they fight once landed)', cd:34, aim:1 },
+  { id:'strike',  name:['Strike','空袭'],    tip:['A bomber flight sweeps through, laying bombs along a line','一队轰炸机掠过，沿线洒下航弹'], cd:26, aim:1 },
+  { id:'barrage', name:['Barrage','炮击'],   tip:['12 howitzer shells walk across the target area','12 发榴弹陆续砸进指定区域'],                cd:20, aim:1 },
+  { id:'reinf',   name:['Reinforce','增援'], tip:['Commit a batch of units from the rear immediately','后方立刻投入一批部队'],                   cd:16, aim:0 },
+  { id:'rally',   name:['Rally','鼓舞'],     tip:['Clears suppression, +speed and rate of fire for 7s','解除压制，全员提速抢攻 7 秒'],           cd:30, aim:1 },
+  { id:'smoke',   name:['Smoke','烟雾'],     tip:['Lays smoke; enemy accuracy into it drops hard','放一片烟，敌军打这片命中大降'],               cd:18, aim:1 },
+  { id:'airdrop', name:['Airdrop','空降'],   tip:['Transport drops a paratrooper stick (they fight once landed)','运输机掠过，投下一队伞兵（落地才能开火）'], cd:34, aim:1 },
 ];
 const cmdCd = {};
 CMDS.forEach(c => cmdCd[c.id] = 0);
@@ -1160,17 +1214,17 @@ function execCmd(id, wx, wz) {
     for (let i = 0; i < 9; i++)
       ordnance(side, wx + (i - 4) * 52 + rnd(-12, 12), wz + rnd(-.05, .05), .55 + i * .17, 46, 62, .6);
     fx.push({ k: 'flyby', wx, wz, alt: 320, t: 0, dur: 2.4, sd: (Math.random() * 1e6) | 0, side });
-    pushLog(sideName(side) + ' calls in an air strike');
+    pushLog(sideName(side) + T('lgStrike'));
   } else if (id === 'barrage') {
     for (let i = 0; i < 12; i++)
       ordnance(side, wx + rnd(-95, 95), wz + rnd(-95, 95) / DEPTH, rnd(.3, 2.6), 40, 54, .55);
-    pushLog(sideName(side) + ' requests a barrage');
+    pushLog(sideName(side) + T('lgBarrage'));
   } else if (id === 'reinf') {
     for (let i = 0; i < 5; i++) {
       reinforce(side);
       fx.push({ k: 'puff', wx: side === 0 ? 60 : WORLD_W - 60, wz: rnd(.1, .9), alt: 6, t: 0, dur: .5, sd: (Math.random() * 1e6) | 0 });
     }
-    pushLog(sideName(side) + ' reinforcements arrive');
+    pushLog(sideName(side) + T('lgReinf'));
   } else if (id === 'rally') {
     let n = 0;
     for (const u of units) {
@@ -1180,19 +1234,19 @@ function execCmd(id, wx, wz) {
       n++;
     }
     fx.push({ k: 'rally', wx, wz, alt: 0, t: 0, dur: 1.1, sd: (Math.random() * 1e6) | 0, side });
-    pushLog(sideName(side) + ' rallies ' + n + ' units');
+    pushLog(sideName(side) + T('lgRally') + n + T('lgUnits'));
   } else if (id === 'airdrop') {
     fx.push({ k: 'flyby', wx, wz, alt: 350, t: 0, dur: 2.8, sd: (Math.random() * 1e6) | 0, side });
     for (let i = 0; i < 5; i++) {
       const u = spawn(side, 'para', wx + (i - 2) * 42 * K + rnd(-14, 14), wz + rnd(-.05, .05));
       u.alt = 290 + i * 26;                     // 依次跳出舱门，高度错开
     }
-    pushLog(sideName(side) + ' airborne drop');
+    pushLog(sideName(side) + T('lgDrop'));
   } else if (id === 'smoke') {
     for (let i = 0; i < 4; i++)
       smokes.push({ wx: wx + rnd(-70, 70), wz: wz + rnd(-70, 70) / DEPTH, alt: 0,
                     r0: rnd(52, 76) * K, r: 30, t: 0, life: 13, sd: (Math.random() * 1e6) | 0 });
-    pushLog(sideName(side) + ' lays smoke');
+    pushLog(sideName(side) + T('lgSmoke'));
   }
   cmdCd[id] = CMDS.find(c => c.id === id).cd;
 }
@@ -1853,31 +1907,32 @@ function unitAt(sx, sy) {
 function drawTip(u) {
   const q = proj(u.wx, u.wz, u.alt || 0), sc = scaleAt(q[2]);
   const nn = natIdx(u.side);
-  const model = u.d.m ? u.d.m[nn] : u.d.name;
-  const L = [sideName(u.side) + ' ' + model + (u.rank ? ' · ' + RANK_NAME[u.rank] : '')];
-  L.push(u.d.name + '　HP ' + Math.max(0, Math.ceil(u.hp)) + '/' + u.max + (u.kills ? '　kills ' + u.kills : ''));
+  const model = u.d.m ? L(u.d.m[nn]) : L(u.d.name);
+  const rows = [sideName(u.side) + ' ' + model + (u.rank ? ' · ' + L(RANK_NAME[u.rank]) : '')];
+  rows.push(L(u.d.name) + '　' + T('hp') + ' ' + Math.max(0, Math.ceil(u.hp)) + '/' + u.max +
+            (u.kills ? '　' + T('kills') + ' ' + u.kills : ''));
   for (const w of u.ws)
-    L.push('· ' + (w.d.m ? w.d.m[nn] : w.d.name) + ' ' + w.d.rof.toFixed(1) + 's' + (w.d.burst ? '×' + w.d.burst : '') +
-           (w.ammo !== Infinity ? '　ammo ' + w.ammo : '') + (w.cd > 0 ? '　reloading' : ''));
-  if (u.d.support) L.push('· ' + (u.d.support === 'medic' ? 'heals allies' : 'unsuppress · faster reload') +
-                          (u.link ? ' (supporting)' : ''));
+    rows.push('· ' + (w.d.m ? L(w.d.m[nn]) : L(w.d.name)) + ' ' + w.d.rof.toFixed(1) + 's' + (w.d.burst ? '×' + w.d.burst : '') +
+           (w.ammo !== Infinity ? '　' + T('ammo') + ' ' + w.ammo : '') + (w.cd > 0 ? '　' + T('reloading') : ''));
+  if (u.d.support) rows.push('· ' + (u.d.support === 'medic' ? T('heals') : T('resup')) +
+                          (u.link ? T('supporting') : ''));
   const st = [];
-  if (u.sup > .05) st.push('suppressed ' + Math.round(u.sup * 100) + '%');
-  if (u.prone > .5) st.push('prone');
-  if (u.bunker) st.push('in bunker'); else if (u.cover) st.push('in trench');
-  if (u.mode === 1) st.push('withdrawing');
-  if (u.rtb) st.push('RTB');
-  if (u.d.fuel) st.push('fuel ' + Math.round(clamp(u.fuel / u.d.fuel, 0, 1) * 100) + '%');
-  if (u.dmgTrack) st.push('track damaged');
-  if (u.d.armor && u.hp / u.max < .25) st.push('turret jammed');
-  if (u.boost > 0) st.push('rallied');
-  if (st.length) L.push(st.join('　'));
+  if (u.sup > .05) st.push(T('suppressed') + ' ' + Math.round(u.sup * 100) + '%');
+  if (u.prone > .5) st.push(T('prone'));
+  if (u.bunker) st.push(T('inBunker')); else if (u.cover) st.push(T('inTrench'));
+  if (u.mode === 1) st.push(T('withdraw'));
+  if (u.rtb) st.push(T('rtb'));
+  if (u.d.fuel) st.push(T('fuel') + ' ' + Math.round(clamp(u.fuel / u.d.fuel, 0, 1) * 100) + '%');
+  if (u.dmgTrack) st.push(T('trackDmg'));
+  if (u.d.armor && u.hp / u.max < .25) st.push(T('turretJam'));
+  if (u.boost > 0) st.push(T('rallied'));
+  if (st.length) rows.push(st.join('　'));
 
   ctx.save();
   ctx.font = TIPFONT;
   let wm = 0;
-  for (const l of L) wm = Math.max(wm, ctx.measureText(l).width);
-  const pad = 7, lh = 15, bw = wm + pad * 2, bh = L.length * lh + pad * 1.4;
+  for (const l of rows) wm = Math.max(wm, ctx.measureText(l).width);
+  const pad = 7, lh = 15, bw = wm + pad * 2, bh = rows.length * lh + pad * 1.4;
   let bx = q[0] + 24 * sc, by = q[1] - u.d.h * sc - bh - 6;
   if (bx + bw > W - 6) bx = q[0] - 24 * sc - bw;
   bx = clamp(bx, 4, Math.max(4, W - bw - 4));
@@ -1890,8 +1945,8 @@ function drawTip(u) {
   ctx.globalAlpha = 1; ctx.lineWidth = 1.6;
   rpoly([[bx, by], [bx + bw, by], [bx + bw, by + bh], [bx, by + bh]], true, 1.5);
   ctx.textBaseline = 'top';
-  L.forEach((l, i) => {
-    ctx.fillStyle = i === 0 ? sideCol(u.side) : (i === L.length - 1 && st.length ? '#8a5a2a' : '#3b3a36');
+  rows.forEach((l, i) => {
+    ctx.fillStyle = i === 0 ? sideCol(u.side) : (i === rows.length - 1 && st.length ? '#8a5a2a' : '#3b3a36');
     ctx.fillText(l, bx + pad, by + pad * .7 + i * lh);
   });
   ctx.restore();
@@ -1965,7 +2020,7 @@ function loop(now) {
   /* 战局潮汐：谁在攻势 */
   const tide = Math.sin(tick * .055), el = $('tide');
   if (autoRe && Math.abs(tide) > .3) {
-    el.textContent = tide > 0 ? nat(0).short + ' pushing ▶' : '◀ ' + nat(1).short + ' pushing';
+    el.textContent = tide > 0 ? nat(0).short + ' ' + T('pushing') + ' ▶' : '◀ ' + nat(1).short + ' ' + T('pushing');
     el.style.color = tide > 0 ? sideCol(0) : sideCol(1);
   } else el.textContent = '';
   for (const c of CMDS) {                          // 冷却遮罩
@@ -2012,9 +2067,10 @@ cv.addEventListener('pointerleave', () => { drawing = 0; hover.on = 0; });
 
 /* 兵种按钮 */
 function buildTools() {
+  ['rowG', 'rowA'].forEach(id => $(id).querySelectorAll('button').forEach(b => b.remove()));
   const mk = (list, row) => list.forEach(k => {
     const d = UNITS[k], b = document.createElement('button');
-    b.innerHTML = d.name + '<small>' + d.k.toUpperCase() + ' ' + d.sub + '</small>';
+    b.innerHTML = L(d.name) + '<small>' + d.k.toUpperCase() + ' ' + L(d.sub) + '</small>';
     b.dataset.k = k;
     if (k === curTool) b.className = 'on';
     b.title = tipFor(d);
@@ -2026,13 +2082,14 @@ function buildTools() {
 /* 按钮悬停说明：型号随当前执笔的国家走 */
 function tipFor(d) {
   const nn = natIdx(curSide);
-  return (d.m ? d.m[nn] + ' (' + d.name + ')' : d.name) + '　HP ' + d.hp + '　speed ' + Math.round(d.spd / K) +
-      (d.support ? '\n· support: ' + (d.support === 'medic' ? 'heals allies' : 'unsuppress, faster reload') : '') + '\n' +
-      d.ws.map(w => '· ' + (w.m ? w.m[nn] : w.name) + ': dmg ' + w.dmg + (w.burst ? '×' + w.burst : '') +
-        '　range ' + Math.round(w.rng / K) + '　reload ' + w.rof + 's' +
-        '　vs ' + (w.hits === 'g' ? 'ground' : w.hits === 'a' ? 'air' : 'ground+air') +
-        (w.splash ? '　splash ' + Math.round(w.splash / K) : '') +
-        (w.ammo ? '　ammo ' + w.ammo : '')).join('\n');
+  return (d.m ? L(d.m[nn]) + ' (' + L(d.name) + ')' : L(d.name)) +
+      '　' + T('hp') + ' ' + d.hp + '　' + T('speed') + ' ' + Math.round(d.spd / K) +
+      (d.support ? '\n· ' + T('support') + ': ' + (d.support === 'medic' ? T('heals') : T('resup')) : '') + '\n' +
+      d.ws.map(w => '· ' + (w.m ? L(w.m[nn]) : L(w.name)) + ': ' + T('dmg') + ' ' + w.dmg + (w.burst ? '×' + w.burst : '') +
+        '　' + T('range') + ' ' + Math.round(w.rng / K) + '　' + T('reload') + ' ' + w.rof + 's' +
+        '　' + T('vs') + ' ' + (w.hits === 'g' ? T('vsG') : w.hits === 'a' ? T('vsA') : T('vsGA')) +
+        (w.splash ? '　' + T('splash') + ' ' + Math.round(w.splash / K) : '') +
+        (w.ammo ? '　' + T('ammo') + ' ' + w.ammo : '')).join('\n');
 }
 function selTool(k) {
   curTool = k;
@@ -2043,33 +2100,69 @@ buildTools();
 
 /* 指令按钮 */
 const cmdBtn = {};
-CMDS.forEach(c => {
+function buildCmds() {
+  $('rowC').querySelectorAll('button').forEach(b => b.remove());
+  CMDS.forEach(c => {
   const b = document.createElement('button');
   b.className = 'cmd ready';
-  b.innerHTML = c.name + '<div class="cool"></div>';
-  b.title = c.name + ' (cooldown ' + c.cd + 's)\n' + c.tip + (c.aim ? '\nClick the button, then click the field to aim' : '');
+  b.innerHTML = L(c.name) + '<div class="cool"></div>';
+  b.title = L(c.name) + ' (' + T('cooldown') + ' ' + c.cd + 's)\n' + L(c.tip) + (c.aim ? '\n' + T('aimHint') : '');
   b.onclick = () => {
     if (cmdCd[c.id] > 0) return;
     if (!c.aim) { execCmd(c.id, 0, 0); return; }
     armed = armed === c.id ? null : c.id;
     document.body.classList.toggle('aiming', !!armed);
   };
-  cmdBtn[c.id] = b;
-  $('rowC').appendChild(b);
-});
+    cmdBtn[c.id] = b;
+    $('rowC').appendChild(b);
+  });
+}
+buildCmds();
 
-/* 阵营按钮：点一下把画笔交给这一方，再点同一个按钮就换国家（3 选 2） */
+/* Re-label everything that the language switch touches */
+function applyLang() {
+  document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+  $('hint').textContent = T('hint');
+  $('play').textContent = running ? T('pause') : T('fight');
+  $('auto').textContent = T('auto');
+  $('snd').textContent = T('sound');
+  $('grid').textContent = T('grid');
+  $('lsb').textContent = document.body.classList.contains('ls') ? T('portrait') : T('rotate');
+  $('clr').textContent = T('restart');
+  $('lossLbl').textContent = T('losses');
+  $('langBtn').textContent = lang === 'zh' ? 'EN' : '中';
+  $('facLbl').textContent = L(['Side', '阵营']);
+  $('rowG').firstElementChild.textContent = T('ground');
+  $('rowA').firstElementChild.textContent = T('air');
+  $('rowC').firstElementChild.textContent = T('orders');
+  buildTools(); buildCmds(); refreshSides();
+}
+$('langBtn').onclick = () => {
+  lang = lang === 'zh' ? 'en' : 'zh';
+  try { localStorage.setItem('mg_lang', lang); } catch (e) { }
+  applyLang();
+};
+
+/* 三个国家按钮都摆在台面上，规则就一条：点谁，你就用谁。
+   点场上的另一方 = 把画笔交给它；点没上场的国家 = 换你自己的阵营（重开一局）。
+   之前是"点同一个按钮两次才换国"，没人看得出来。 */
 function refreshSides() {
-  for (let s = 0; s < 2; s++) {
-    const b = $('s' + s);
-    b.textContent = nat(s).name;
-    b.style.borderColor = sideCol(s);
-    b.style.background = curSide === s ? sideCol(s) : 'transparent';
-    b.style.color = curSide === s ? 'var(--paper)' : 'var(--ink)';
-    $('l' + s).firstChild.textContent = s === 0 ? nat(0).short + ' ' : '';
-    $('l' + s).style.color = sideCol(s);
-  }
+  document.querySelectorAll('.nat').forEach(b => {
+    const i = +b.dataset.n, n = NATIONS[i];
+    b.textContent = L(n.name);
+    b.style.borderColor = n.col;
+    const isPen = i === match[curSide], isFoe = i === match[1 - curSide];
+    b.className = 'nat ' + (isPen ? 'pen' : isFoe ? 'foe' : 'out');
+    b.style.background = isPen ? n.col : 'transparent';
+    b.style.color = isPen ? 'var(--paper)' : 'var(--ink)';
+    b.title = isPen ? L(['You are drawing for this side', '你正在为这一方画部队'])
+            : isFoe ? L(['Click to draw for this side instead', '点一下改为给这一方画'])
+                    : L(['Click to switch your side to this nation (restarts)', '点一下把自己换成这个国家（重开一局）']);
+  });
+  $('l0').firstChild.textContent = nat(0).short + ' ';
+  $('l0').style.color = sideCol(0);
   $('l1').lastChild.textContent = ' ' + nat(1).short;
+  $('l1').style.color = sideCol(1);
   $('pb').style.background = sideCol(0);
   $('pr').style.background = sideCol(1);
   document.querySelectorAll('#tools button').forEach(b => {
@@ -2077,22 +2170,17 @@ function refreshSides() {
     if (d) b.title = tipFor(d);
   });
 }
-document.querySelectorAll('.side').forEach(b => {
-  b.onclick = () => {
-    const s = +b.dataset.side;
-    if (curSide === s) {                       // 已经拿着这方的笔 → 换国家
-      let i = match[s];
-      do { i = (i + 1) % NATIONS.length; } while (i === match[1 - s]);
-      match[s] = i;
-      $('clr').click();                        // 换阵营等于重开一局
-    } else curSide = s;
-    refreshSides();
-  };
-});
+function pickNation(i) {
+  if (i === match[curSide]) return;                  // 已经是你这一方
+  if (i === match[1 - curSide]) curSide = 1 - curSide;   // 点对手 → 画笔交给它
+  else { match[curSide] = i; $('clr').click(); }      // 点没上场的 → 你换成它
+  refreshSides();
+}
+document.querySelectorAll('.nat').forEach(b => b.onclick = () => pickNation(+b.dataset.n));
 function togglePlay() {
   running = !running;
   if (running) { over = false; hideBanner(); }
-  $('play').textContent = running ? 'Pause' : 'Fight';
+  $('play').textContent = running ? T('pause') : T('fight');
   $('play').classList.toggle('on', running);
 }
 $('play').onclick = togglePlay;
@@ -2109,7 +2197,7 @@ $('lsb').onclick = () => {
   const on = !document.body.classList.contains('ls');
   document.body.classList.toggle('ls', on);
   $('lsb').classList.toggle('on', on);
-  $('lsb').textContent = on ? 'Portrait' : 'Rotate';
+  $('lsb').textContent = on ? T('portrait') : T('rotate');
   try { localStorage.setItem('mg_ls', on ? '1' : '0'); } catch (e) { }
   applyRot();
 };
@@ -2119,12 +2207,12 @@ $('clr').onclick = () => {
   scars = null;
   for (const c of CMDS) cmdCd[c.id] = 0;
   hideBanner(); initArmies();
-  running = true; $('play').textContent = 'Pause'; $('play').classList.add('on');
+  running = true; $('play').textContent = T('pause'); $('play').classList.add('on');
 };
 addEventListener('keydown', e => {
   if (e.key === ' ') { e.preventDefault(); togglePlay(); return; }
   if (e.key === 'Escape') { armed = null; document.body.classList.remove('aiming'); return; }
-  if (e.key === 'Tab') { e.preventDefault(); document.querySelector('.side[data-side="' + (1 - curSide) + '"]').click(); return; }
+  if (e.key === 'Tab') { e.preventDefault(); pickNation(match[1 - curSide]); return; }
   const k = e.key.toLowerCase();
   for (const key of ALL) if (UNITS[key].k === k) { selTool(key); return; }
 });
@@ -2132,18 +2220,18 @@ addEventListener('keydown', e => {
 function showBanner(txt, col) {
   $('bantext').textContent = txt; $('bantext').style.color = col;
   $('banner').style.display = 'flex';
-  $('play').textContent = 'Fight'; $('play').classList.remove('on');
+  $('play').textContent = T('fight'); $('play').classList.remove('on');
 }
 const hideBanner = () => $('banner').style.display = 'none';
 
 try {
   if (localStorage.getItem('mg_ls') === '1') {
     document.body.classList.add('ls');
-    $('lsb').classList.add('on'); $('lsb').textContent = 'Portrait';
+    $('lsb').classList.add('on'); $('lsb').textContent = T('portrait');
   }
 } catch (e) { }
 applyRot();
-refreshSides();
+applyLang();
 initArmies();
 /* ?warmup=45 预跑 45 游戏秒再开始渲染 —— 截图和演示用，
    免得看到的总是双方还没接触的开局 */
