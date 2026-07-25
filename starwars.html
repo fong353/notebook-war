@@ -40,6 +40,7 @@
   #wrap{flex:1 1 auto;position:relative;min-height:0}
   canvas{display:block;width:100%;height:100%;cursor:crosshair;touch-action:none}
   body.aiming canvas{cursor:cell}
+  button.cmd.nospect{opacity:.42;cursor:default}
   body.panning canvas{cursor:grabbing}
   #zoom{
     position:absolute;right:10px;top:8px;display:none;gap:5px;align-items:center;
@@ -183,6 +184,7 @@ const UI = {
   auto:     ['Auto-balance', '自动平衡'], sound: ['Sound', '音效'],
   grid:     ['Grid', '网格'],       rotate:   ['Rotate', '横屏'],
   portrait: ['Portrait', '竖屏'],   restart:  ['Restart', '重来'],
+  spectNone:['(no set-play)', '（无奇观）'],
   ground:   ['G', '陆'],            air:      ['A', '空'],  spect:  ['S', '奇'],  orders: ['!', '令'],
   hint:     ['Drag to draw units　·　Click an order, then click the field　·　Space to pause',
              '按住拖动＝画部队　·　点指令再点战场　·　空格暂停'],
@@ -835,6 +837,12 @@ function update(dt) {
     c.restore();
   }
   for (const id in cmdCd) if (cmdCd[id] > 0) cmdCd[id] = Math.max(0, cmdCd[id] - dt);
+  for (let i = shells.length - 1; i >= 0; i--) {     // 跟着模拟时钟的延迟队列
+    shells[i].t -= dt;
+    if (shells[i].t <= 0) { shells[i].fn(); shells.splice(i, 1); }
+  }
+  evTimer -= dt;                                     // 战场奇观：自己会来，不用你操作
+  if (evTimer <= 0) { evTimer = rnd(60, 105); runSpectacle(); }
 
   if (autoRe) {
     reTimer -= dt;
@@ -908,6 +916,8 @@ function update(dt) {
       }
     }
     u.medicated = 0;
+    /* 奇观拉上来的部队打完就撤 —— 它们是来做一件事的，不是来常驻的 */
+    if (u.leave > 0) { u.leave -= dt; if (u.leave <= 0 && u.mode !== 1) u.mode = 2; }
 
     /* 装甲损伤：血少了先断履带、再卡炮塔，一路冒烟 */
     const hurtTrack = u.d.armor && frac < .45, hurtTurret = u.d.armor && frac < .25;
@@ -1004,6 +1014,11 @@ function update(dt) {
         u.wx = clamp(u.wx, -180, WORLD_W + 180);
       }
       u.alt = clamp(u.alt, 18, 360);
+    } else if (u.mode === 2) {
+      /* ── 归建：任务完成，走出地图边缘就算收队，不记作损失 ── */
+      const home = u.side === 0 ? -70 : WORLD_W + 70;
+      u.wx += Math.sign(home - u.wx) * sp * dt * 1.3;
+      if (u.wx < -60 || u.wx > WORLD_W + 60) { u.hp = 0; u.silent = 1; u.noloss = 1; }
     } else if (u.mode === 1) {
       /* ── 撤退整补：往自家后方退 ── */
       const home = u.side === 0 ? 40 : WORLD_W - 40;
@@ -1299,6 +1314,7 @@ const CMDS = [
   { id:'rally',   name:['Rally','鼓舞'],     tip:['Clears suppression, +speed and rate of fire for 7s','解除压制，全员提速抢攻 7 秒'],           cd:30, aim:1 },
   { id:'smoke',   name:['Smoke','烟雾'],     tip:['Lays smoke; enemy accuracy into it drops hard','放一片烟，敌军打这片命中大降'],               cd:18, aim:1 },
   { id:'airdrop', name:['Airdrop','空降'],   tip:['Transport drops a paratrooper stick (they fight once landed)','运输机掠过，投下一队伞兵（落地才能开火）'], cd:34, aim:1 },
+  { id:'spect',   name:['Set-play','奇观行动'],  tip:['A one-off action — a charge, a barrage, a rocket. The button says which one is standing by','一次性的动作：一场冲锋、一轮弹幕、一发火箭。按钮上写着眼下待命的是哪一个'], cd:0, aim:0 },
 ];
 const cmdCd = {};
 CMDS.forEach(c => cmdCd[c.id] = 0);
@@ -1354,8 +1370,113 @@ function execCmd(id, wx, wz) {
                     r0: rnd(52, 76) * K, r: 30, t: 0, life: 13, sd: (Math.random() * 1e6) | 0 });
     pushLog(sideName(side) + T('lgSmoke'));
   }
+  if (id === 'spect') {
+    /* 直接放按钮上写着的那个，不在这里重抽 */
+    if (!actQ) return;
+    fireSpect(actQ); refreshAct(true);
+  }
   cmdCd[id] = CMDS.find(c => c.id === id).cd;
 }
+
+/* ══════════════════════════ SPECTACLES ══════════════════════════
+   偶尔自己发生的大场面：不用你操作，也不占指令冷却。每样归属某一国，
+   只有那国上场才见得到；带 when 的还要战况够条件才来。
+   kind='force' 是一支超规格的兵力开上来接着打，kind='act' 是一次性的动作。 */
+let evTimer = rnd(40, 75);
+function farSide(side) { return side === 0 ? rnd(WORLD_W * .52, WORLD_W - 70) : rnd(70, WORLD_W * .48); }
+/* 对准敌人真正在的地方 —— 砸一片空地只是放烟花 */
+function enemyCentre(side) {
+  let n = 0, sx = 0, sz = 0;
+  for (const u of units)
+    if (u.side !== side && u.hp > 0 && u.d.layer === 'g') { sx += u.wx; sz += u.wz; n++; }
+  return n ? [sx / n, sz / n] : [farSide(side), .5];
+}
+/* 直接从天上砸下来的东西 */
+function skyFall(side, wx, wz, dmg, splash, dur, alt) {
+  projs.push({
+    kind: 'rocket', side, dmg, vs: [1.5, 1.6], splash: splash * K, supp: 2.2, owner: null,
+    sx: wx, sz: wz, sa: alt, ex: wx, ez: wz, ea: 0, wx, wz, alt,
+    t: 0, pt: 0, delay: 0, life: 14, col: sideCol(side),
+    sd: (Math.random() * 1e6) | 0, miss: 0, dur, arc: 0, trail: [],
+  });
+}
+/* 简易延迟：挂进队列跟着模拟时钟走，不用真实计时器 */
+const shells = [];
+function setTimeoutShell(delay, fn) { shells.push({ t: delay, fn }); }
+function spectPool(forceSide, kind) {
+  const ok = e => (e.nat < 0 || e.nat === match[0] || e.nat === match[1]);
+  /* 不属于任何一方的奇观两边都可能发动，前置条件得逐边验 */
+  const pool = [];
+  for (const e of SPECTACLE) {
+    if (!ok(e)) continue;
+    if (kind && e.kind !== kind) continue;
+    let sides = e.nat < 0 ? [0, 1] : [e.nat === match[0] ? 0 : 1];
+    if (forceSide !== undefined) sides = sides.filter(sd => sd === forceSide);
+    for (const sd of sides) if (!e.when || e.when(sd))
+      for (let i = e.w || 1; i > 0; i--) pool.push([e, sd]);   // w = 抽中权重
+  }
+  return pool;
+}
+function runSpectacle(forceSide, kind) {
+  const pool = spectPool(forceSide, kind);
+  if (!pool.length) return false;
+  fireSpect(pick(pool));
+  return true;
+}
+function fireSpect(entry) {
+  const [e, side] = entry;
+  e.go(side);
+  pushLog('⚑ ' + (e.nat < 0 ? '' : sideName(side) + ' — ') + L(e.name));
+}
+/* 待命的那一个奇观行动。按钮上直接写它的名字 —— 玩家该知道自己按下去会
+   发生什么，而不是抽一次盲盒 */
+let actQ = null;
+function refreshAct(force) {
+  if (!force && actQ && actQ[1] === curSide) {
+    const [e, sd] = actQ;
+    if ((e.nat < 0 || e.nat === match[sd]) && (!e.when || e.when(sd))) return;
+  }
+  const pool = spectPool(curSide, 'act');
+  actQ = pool.length ? pick(pool) : null;
+}
+const SPECTACLE = [
+  { nat: 0, name: ['AT-AT advance', 'AT-AT 推进'], kind: 'force', go(side) {
+      for (let i = 0; i < 2; i++)
+        spawn(side, 'tank', side === 0 ? -30 - i * 60 : WORLD_W + 30 + i * 60, .3 + i * .3);
+    } },
+  { nat: 0, name: ['Orbital bombardment', '轨道轰炸'], kind: 'act', go(side) {
+      /* 从大气层外打下来，没有预警也没得拦 */
+      const c = enemyCentre(side);
+      for (let i = 0; i < 5; i++)
+        setTimeoutShell(i * .5, () => skyFall(side, c[0] + rnd(-150, 150), c[1] + rnd(-110, 110) / DEPTH, 150, 130, 1.5, 900));
+    } },
+  { nat: 1, name: ['Ion cannon', 'V-150 离子炮'], kind: 'act', go(side) {
+      /* 霍斯那门炮：一发把头顶上的东西打瘫 */
+      const c = enemyCentre(side);
+      skyFall(side, c[0], c[1], 260, 210, 1.1, 700);
+    } },
+  { nat: 1, name: ['Y-wing run', 'Y 翼轰炸'], kind: 'force', go(side) {
+      for (let i = 0; i < 3; i++) {
+        const u = spawn(side, 'atk', side === 0 ? -40 - i * 66 : WORLD_W + 40 + i * 66, .26 + i * .24);
+        u.rank = 1;
+      }
+    } },
+  { nat: 2, name: ['SPHA-T beam', 'SPHA-T 光束'], kind: 'act', go(side) {
+      /* 重炮推上来充能、开一炮、拖走 */
+      const x0 = side === 0 ? WORLD_W * .18 : WORLD_W * .82;
+      for (let i = 0; i < 2; i++) {
+        const u = spawn(side, 'sam', x0 + rnd(-26, 26), .32 + i * .3);
+        u.leave = 22; u.boost = 6;
+        u.ws.forEach(w => { w.cd = 1 + i * .8; });
+      }
+    } },
+  { nat: 2, name: ['ARC-170 flight', 'ARC-170 编队'], kind: 'force', go(side) {
+      for (let i = 0; i < 3; i++) {
+        const u = spawn(side, 'fig', side === 0 ? -40 - i * 55 : WORLD_W + 40 + i * 55, .24 + i * .26);
+        u.rank = 2;
+      }
+    } },
+];
 
 /* ══════════════════════════ 画兵 ══════════════════════════ */
 const bob = u => (u.prone > .5 ? 0 : Math.sin(tick * 6 + u.ph) * 1.2);
@@ -2185,11 +2306,21 @@ function loop(now) {
     el.style.color = tide > 0 ? sideCol(0) : sideCol(1);
   } else el.textContent = '';
   for (const c of CMDS) {                          // 冷却遮罩
-    const b = cmdBtn[c.id], k = cmdCd[c.id] / c.cd;
+    const b = cmdBtn[c.id], k = c.cd ? cmdCd[c.id] / c.cd : 0;
     b.querySelector('.cool').style.height = (k * 100) + '%';
     b.classList.toggle('cooling', cmdCd[c.id] > 0);
     b.classList.toggle('ready', cmdCd[c.id] <= 0);
     b.classList.toggle('armed', armed === c.id);
+    if (c.id === 'spect') {
+      refreshAct();
+      /* 带上 ⚑ ——日志里奇观也是这个记号，一眼看出这按钮不是常规指令 */
+      const nm = actQ ? '⚑ ' + L(actQ[0].name) : T('spectNone');
+      if (b.dataset.nm !== nm) {
+        b.dataset.nm = nm; b.firstChild.textContent = nm;
+        b.title = L(c.name) + ' · ' + nm + '\n' + L(c.tip);
+      }
+      b.classList.toggle('nospect', !actQ);
+    }
   }
   requestAnimationFrame(loop);
 }

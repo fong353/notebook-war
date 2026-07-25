@@ -56,14 +56,17 @@ A single HTML file. No build step, no dependencies, no network calls — open it
 - **Set-pieces arrive on their own.** Every minute or so something outsized turns up without you
   asking: a V-2 that simply lands with no warning and nothing that can intercept it, a V-1 slow
   enough for the flak to get a shot at, a B-17 formation, a Katyusha battalion. 1918 gets its own —
-  Zeppelin raids, the Paris Gun, railway-gun barrages, over-the-top waves, a cavalry charge.
-  Each belongs to one nation, so you only see it when that nation is in the match.
+  Zeppelin raids, the Paris Gun, a railway gun that rolls on and shells the line, over-the-top
+  waves, a cavalry charge. The Cold War has Warthog runs and Bear flyovers; the galactic setting
+  has AT-ATs striding in and the Hoth ion cannon. Each belongs to one nation, so you only see it
+  when that nation is in the match — and when something rolls out to fire, you see the guns
+  themselves arrive, shoot and withdraw, rather than shells falling out of an empty sky.
 - **Commander orders** on cooldowns — air strike, barrage, reinforce, rally, smoke, airdrop, plus a
-  mine in 1918 — so you can lean on the battle without micromanaging it. One of them stages a **set-play** — a one-off
-  action like a charge, a barrage or a V-2. The button is labelled with whichever one is standing
-  by, so you always know what you are about to set off; each has its own precondition, so what is
-  on offer changes as the battle does. The outsized *formations* stay unrequestable: a Zeppelin,
-  Jasta 11 or the Cambrai wedge still turns up on its own or not at all.
+  mine in 1918 — so you can lean on the battle without micromanaging it. One of them, with no cooldown, stages a
+  **set-play** — a one-off action like a charge, a barrage or a V-2. The button is labelled with
+  whichever one is standing by, so you always know what you are about to set off; each has its own
+  precondition, so what is on offer changes as the battle does. The outsized *formations* stay
+  unrequestable: a Zeppelin, Jasta 11 or the Cambrai wedge still turns up on its own or not at all.
 
 ![Nations](docs/nations.png)
 

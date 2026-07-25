@@ -939,6 +939,8 @@ function update(dt) {
       }
     }
     u.medicated = 0;
+    /* 奇观拉上来的部队打完就撤 —— 它们是来做一件事的，不是来常驻的 */
+    if (u.leave > 0) { u.leave -= dt; if (u.leave <= 0 && u.mode !== 1) u.mode = 2; }
 
     /* 装甲损伤：血少了先断履带、再卡炮塔，一路冒烟 */
     const hurtTrack = u.d.armor && frac < .45, hurtTurret = u.d.armor && frac < .25;
@@ -1042,6 +1044,11 @@ function update(dt) {
         u.wx = clamp(u.wx, -180, WORLD_W + 180);
       }
       u.alt = clamp(u.alt, 18, 360);
+    } else if (u.mode === 2) {
+      /* ── 归建：任务完成，走出地图边缘就算收队，不记作损失 ── */
+      const home = u.side === 0 ? -70 : WORLD_W + 70;
+      u.wx += Math.sign(home - u.wx) * sp * dt * 1.3;
+      if (u.wx < -60 || u.wx > WORLD_W + 60) { u.hp = 0; u.silent = 1; u.noloss = 1; }
     } else if (u.mode === 1) {
       /* ── 撤退整补：往自家后方退 ── */
       const home = u.side === 0 ? 40 : WORLD_W - 40;
@@ -1359,7 +1366,7 @@ const CMDS = [
   { id:'smoke',   name:['Gas','毒气'],       tip:['A drifting gas cloud: keeps hurting and pinning anyone caught in it','飘散的毒气云：持续伤害并压制云里的一切'], cd:22, aim:1 },
   { id:'mine',    name:['Mine','坑道爆破'], tip:['Sappers have been digging for weeks. Fires after a delay, and leaves a hole in the map','工兵挖了几周的坑道，延迟起爆，地图上会留个大坑'], cd:70, aim:1 },
   { id:'airdrop', name:['Raid','突击队'],    tip:['A raiding party goes over the top into the target trench','一队突击兵越出战壕，摸进指定阵地'], cd:34, aim:1 },
-  { id:'spect',   name:['Set-play','奇观行动'],  tip:['A one-off action — a charge, a barrage, a rocket. The button says which one is standing by','一次性的动作：一场冲锋、一轮弹幕、一发火箭。按钮上写着眼下待命的是哪一个'], cd:85, aim:0 },
+  { id:'spect',   name:['Set-play','奇观行动'],  tip:['A one-off action — a charge, a barrage, a rocket. The button says which one is standing by','一次性的动作：一场冲锋、一轮弹幕、一发火箭。按钮上写着眼下待命的是哪一个'], cd:0, aim:0 },
 ];
 const cmdCd = {};
 CMDS.forEach(c => cmdCd[c.id] = 0);
@@ -1519,10 +1526,10 @@ const SPECTACLE = [
         setTimeoutShell(i * .9, () => { const c = enemyCentre(side);
           skyFall(side, c[0] + rnd(-130, 130), c[1] + rnd(-100, 100) / DEPTH, 190, 150, 1.7, 820); });
     } },
-  { nat: 0, name: ['Railway gun barrage', '列车炮弹幕'], kind:'act', go(side) {
-      const c = enemyCentre(side);
-      for (let i = 0; i < 7; i++)
-        ordnance(side, c[0] + (i - 3) * 40 * K + rnd(-16, 16), c[1] + rnd(-90, 90) / DEPTH, .4 + i * .5, 110, 120, 1.1);
+  { nat: 0, name: ['Railway gun barrage', '列车炮弹幕'], kind: 'act', go(side) {
+      /* 把炮本身推上轨道打几发再拖走 —— 这东西的看点就是那门炮 */
+      const u = spawn(side, 'rail', side === 0 ? 70 : WORLD_W - 70, rnd(.3, .7));
+      u.leave = 26; u.ws.forEach(w => { w.cd = 1.2; });
     } },
   { nat: 2, name: ['Flying Circus', '飞行马戏团'], kind:'force', go(side) {
       /* Jasta 11 — the whole squadron, all aces */
@@ -1535,18 +1542,6 @@ const SPECTACLE = [
       /* The first mass tank attack in history */
       for (let i = 0; i < 7; i++)
         spawn(side, 'tank', side === 0 ? -30 - i * 42 : WORLD_W + 30 + i * 42, .18 + i * .105);
-    } },
-  { nat: 2, name: ['Stormtrooper push', '暴风突击'], kind:'force', go(side) {
-      /* Spring 1918: the barrage walks, the assault squads follow it in */
-      const c = enemyCentre(side), fwd = side === 0 ? 1 : -1;
-      for (let step = 0; step < 5; step++)
-        for (let i = 0; i < 3; i++)
-          ordnance(side, c[0] - fwd * 150 * K + fwd * step * 46 * K + rnd(-20, 20),
-                   c[1] + (i - 1) * .26, .3 + step * .5, 40, 54, .6);
-      for (let i = 0; i < 6; i++) {
-        const u = spawn(side, 'para', c[0] - fwd * 240 * K + rnd(-30, 30), c[1] + rnd(-.2, .2));
-        u.boost = 14;
-      }
     } },
   { nat: 1, name: ['Balloon buster', '气球猎手'], kind:'force',
     when: side => units.some(u => u.side !== side && u.hp > 0 && u.d.key === 'balloon'),
@@ -1586,10 +1581,15 @@ const SPECTACLE = [
       for (let i = 0; i < 7; i++)
         spawn(side, 'cav', side === 0 ? -20 - i * 30 : WORLD_W + 20 + i * 30, .13 + i * .122);
     } },
-  { nat: 1, name: ['French 75 rafale', '法国 75 速射'], kind:'act', go(side) {
-      const c = enemyCentre(side);
-      for (let i = 0; i < 16; i++)
-        ordnance(side, c[0] + rnd(-110, 110), c[1] + rnd(-110, 110) / DEPTH, i * .18, 34, 46, .5);
+  { nat: 1, name: ['French 75 rafale', '法国 75 速射'], kind: 'act', go(side) {
+      /* 几门 75 推上来打一轮急速射再撤。这门炮出名就出名在射速，
+         所以得看得见炮在那儿一发接一发地放 */
+      const x0 = side === 0 ? WORLD_W * .22 : WORLD_W * .78;
+      for (let i = 0; i < 4; i++) {
+        const u = spawn(side, 'arty', x0 + rnd(-30, 30), .2 + i * .2);
+        u.leave = 18; u.boost = 7;
+        u.ws.forEach(w => { w.cd = .4 + i * .3; });
+      }
     } },
 ];
 
@@ -2615,7 +2615,7 @@ function loop(now) {
     el.style.color = tide > 0 ? sideCol(0) : sideCol(1);
   } else el.textContent = '';
   for (const c of CMDS) {                          // 冷却遮罩
-    const b = cmdBtn[c.id], k = cmdCd[c.id] / c.cd;
+    const b = cmdBtn[c.id], k = c.cd ? cmdCd[c.id] / c.cd : 0;
     b.querySelector('.cool').style.height = (k * 100) + '%';
     b.classList.toggle('cooling', cmdCd[c.id] > 0);
     b.classList.toggle('ready', cmdCd[c.id] <= 0);
