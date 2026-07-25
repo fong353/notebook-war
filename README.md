@@ -34,14 +34,18 @@ A single HTML file. No build step, no dependencies, no network calls — open it
 - **Four settings.** `ww1.html` is 1918 — British, French and German, and the one where the trench
   system finally matters: barbed wire that snags infantry while tanks flatten it, drifting gas that
   keeps hurting whoever is caught in it, a creeping barrage that walks forward a rank at a time,
-  rhomboid Mark IVs, a Fokker triplane and a Zeppelin overhead.
+  rhomboid Mark IVs, a Fokker triplane and a Zeppelin overhead. It is also where the two
+  set-pieces about obsolete tactics live: a battalion going *over the top* at a walk because
+  the barrage was supposed to have cut the wire, and a cavalry squadron that only turns up
+  when the enemy line has actually thinned — the gap the cavalry divisions spent four years
+  waiting for and almost never got.
   `index.html` is 1944: Wehrmacht, US Army and Red Army, pick any two to fight.
   `cold-war.html` is US vs USSR, with helicopters, drones and cruise missiles.
   `starwars.html` is Empire / Rebels / Republic — walkers instead of tanks, so an AT-AT strides in
   on four jointed legs while a TIE fighter holds its hex panels overhead.
 - **Bilingual.** One button in the corner switches the whole interface between English and Chinese,
   designations included (`Pz.VI Tiger` ↔ `Pz.VI 虎式`).
-- **16 unit types**, each with real equipment per nation — a Tiger, a Sherman and a T-34 are three
+- **Sixteen-odd unit types**, each with real equipment per nation — a Tiger, a Sherman and a T-34 are three
   different silhouettes, not three colours of the same box.
 - **Weapons are separate things.** A unit carries one or two, each with its own range, reload and
   ammo, and picks between them by expected damage against the current target. A tank uses its coax
@@ -52,8 +56,8 @@ A single HTML file. No build step, no dependencies, no network calls — open it
 - **Set-pieces arrive on their own.** Every minute or so something outsized turns up without you
   asking: a V-2 that simply lands with no warning and nothing that can intercept it, a V-1 slow
   enough for the flak to get a shot at, a B-17 formation, a Katyusha battalion. 1918 gets its own —
-  Zeppelin raids, the Paris Gun, railway-gun barrages. Each belongs to one nation, so you only see
-  it when that nation is in the match.
+  Zeppelin raids, the Paris Gun, railway-gun barrages, over-the-top waves, a cavalry charge.
+  Each belongs to one nation, so you only see it when that nation is in the match.
 - **Six commander orders** on cooldowns — air strike, barrage, reinforce, rally, smoke, airdrop —
   so you can lean on the battle without micromanaging it.
 
@@ -97,6 +101,13 @@ deadlocks no matter how the target moves.
 dull picture. What was needed was units that survive the first exchange, so both sides stay tangled
 together: more health, assault units pushing to knife range, and minimum ranges on missiles so
 close-in fighting falls back to guns.
+
+**Armour needed a second tier before the numbers could be honest.** Every weapon had one
+anti-armour multiplier, and aircraft were flagged as armoured too — so the same number decided
+both *can this gun win a dogfight* and *can it pierce a tank*. Fighter guns had to be set high
+enough to matter in the air, which quietly let them drill through a Tiger. Splitting armour into
+two tiers — aircraft and light vehicles on one, tanks on the other — let machine guns become
+useless against tanks without breaking air combat, which is what made a tank feel like a tank.
 
 **Craters fade by erasing the whole scar layer a little at a time**, rather than storing a lifetime
 per crater and redrawing all of them each frame. Old craters have been erased more often, so they

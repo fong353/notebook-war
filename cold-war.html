@@ -129,6 +129,7 @@
   <div class="grp col" id="tools">
     <div class="row" id="rowG"><span class="lbl">陆</span></div>
     <div class="row" id="rowA"><span class="lbl">空</span></div>
+    <div class="row" id="rowS"><span class="lbl">S</span></div>
   </div>
   <div class="grp col">
     <div class="row" id="rowC"><span class="lbl">令</span></div>
@@ -168,7 +169,7 @@ const UI = {
   auto:     ['Auto-balance', '自动平衡'], sound: ['Sound', '音效'],
   grid:     ['Grid', '网格'],       rotate:   ['Rotate', '横屏'],
   portrait: ['Portrait', '竖屏'],   restart:  ['Restart', '重来'],
-  ground:   ['G', '陆'],            air:      ['A', '空'],  orders: ['!', '令'],
+  ground:   ['G', '陆'],            air:      ['A', '空'],  spect:  ['S', '奇'],  orders: ['!', '令'],
   hint:     ['Drag to draw units　·　Click an order, then click the field　·　Space to pause',
              '按住拖动＝画部队　·　点指令再点战场　·　空格暂停'],
   pushing:  ['pushing', '攻势'],
@@ -313,27 +314,27 @@ window.addEventListener('orientationchange', () => setTimeout(applyRot, 120));
    溅射武器不判命中；ammo 只给机载武器                              */
 const WPN = {
   rifle:    { name:['Rifle','步枪'], m:[['M16A2','M16A2'],['AK-74','AK-74']],      proj:'bullet', dmg:5,  rng:105, rof:.50, hits:'ga', vs:[.45,1],   acc:.68, supp:.07 },
-  grenade:  { name:['Grenade','手雷'], m:[['M67 Grenade','M67 手雷'],['RGD-5','RGD-5']],      proj:'bomb',   dmg:16, rng:58,  rof:4.5, hits:'g',  vs:[.6,1.4],  splash:26, supp:.3 },
+  grenade:  { name:['Grenade','手雷'], m:[['M67 Grenade','M67 手雷'],['RGD-5','RGD-5']],      proj:'bomb',   dmg:16, rng:58,  rof:4.5, hits:'g',  vs:[.6,1.4], vsH:0.35,  splash:26, supp:.3 },
   hmg:      { name:['Machine Gun','重机枪'], m:[['M240B','M240B'],['PKM','PKM']],    proj:'bullet', dmg:4,  rng:135, rof:.55, hits:'ga', vs:[.3,1.25], acc:.52, supp:.2,  burst:3 },
-  srifle:   { name:['Sniper Rifle','狙击枪'], m:[['M24 SWS','M24 SWS'],['SVD Dragunov','SVD 德拉贡诺夫']],    proj:'bullet', dmg:30, rng:265, rof:2.2, hits:'g',  vs:[.12,3],   acc:.93, supp:.05 },
-  atgmMsl:  { name:['ATGM','反坦克导弹'], m:[['FGM-148 Javelin','FGM-148 标枪'],['9M111 Fagot','9M111 婴儿']],proj:'rocket', dmg:56, rng:245, rof:2.6, hits:'g',  vs:[2.2,.5],  acc:.88, supp:.12, minRng:55 },
-  tankGun:  { name:['120mm Gun','120主炮'], m:[['120mm M256','120mm M256'],['125mm 2A46','125mm 2A46']],   proj:'shell',  dmg:25, rng:185, rof:1.3, hits:'g',  vs:[1.2,1],   acc:.80, supp:.28 },
+  srifle:   { name:['Sniper Rifle','狙击枪'], m:[['M24 SWS','M24 SWS'],['SVD Dragunov','SVD 德拉贡诺夫']],    proj:'bullet', dmg:30, rng:265, rof:2.2, hits:'g',  vs:[0.12,2.4],   acc:.93, supp:.05 },
+  atgmMsl:  { name:['ATGM','反坦克导弹'], m:[['FGM-148 Javelin','FGM-148 标枪'],['9M111 Fagot','9M111 婴儿']],proj:'rocket', dmg:56, rng:245, rof:2.6, hits:'g',  vs:[2.2,.5], vsH:3.2,  acc:.88, supp:.12, minRng:55 },
+  tankGun:  { name:['120mm Gun','120主炮'], m:[['120mm M256','120mm M256'],['125mm 2A46','125mm 2A46']],   proj:'shell',  dmg:30, rng:185, rof:1.3, hits:'g',  vs:[1.2,1], vsH:2.2,   acc:.80, supp:.28 },
   coax:     { name:['Coaxial MG','同轴机枪'], m:[['M240 coax','M240 同轴'],['PKT','PKT']],  proj:'bullet', dmg:4,  rng:112, rof:.45, hits:'ga', vs:[.25,1.3], acc:.60, supp:.18, burst:3 },
-  vehAtgm:  { name:['Vehicle ATGM','车载反坦克导弹'], m:[['BGM-71 TOW','BGM-71 陶式'],['9M113 Konkurs','9M113 竞赛']], proj:'rocket', dmg:56, rng:245, rof:2.6, hits:'g', vs:[2.2,.5], acc:.88, supp:.12, minRng:55 },
-  autocan:  { name:['30mm Autocannon','30机炮'], m:[['25mm Bushmaster','25mm 巨蝮'],['30mm 2A42','30mm 2A42']],    proj:'bullet', dmg:8,  rng:155, rof:.28, hits:'ga', vs:[.55,1.3], acc:.60, supp:.16 },
+  vehAtgm:  { name:['Vehicle ATGM','车载反坦克导弹'], m:[['BGM-71 TOW','BGM-71 陶式'],['9M113 Konkurs','9M113 竞赛']], proj:'rocket', dmg:56, rng:245, rof:2.6, hits:'g', vs:[2.2,.5], vsH:3.2, acc:.88, supp:.12, minRng:55 },
+  autocan:  { name:['30mm Autocannon','30机炮'], m:[['25mm Bushmaster','25mm 巨蝮'],['30mm 2A42','30mm 2A42']],    proj:'bullet', dmg:8,  rng:155, rof:.28, hits:'ga', vs:[0.75,1.3], vsH:0.18, acc:.60, supp:.16 },
   flakGun:  { name:['Flak Barrage','高炮弹幕'], m:[['20mm Vulcan','20mm 火神'],['23mm AZP-23','23mm AZP-23']],  proj:'flak',   dmg:20, rng:215, rof:.45, hits:'a',  vs:[1,1],     acc:.48, supp:.05, burst:2 },
   samMsl:   { name:['SAM','防空导弹'], m:[['MIM-104 Patriot','MIM-104 爱国者'],['S-300','S-300']],  proj:'rocket', dmg:72, rng:430, rof:3.2, hits:'a',  vs:[1,1],     acc:.85, supp:.02, minRng:130 },
-  howitzer: { name:['155mm Howitzer','155榴弹'], m:[['155mm M126','155mm M126'],['152mm 2A33','152mm 2A33']],   proj:'bomb',   dmg:40, rng:400, rof:3.0, hits:'g',  vs:[1,1.2],   splash:56, supp:.55 },
-  mlrsSalvo:{ name:['Rocket Salvo','火箭弹齐射'], m:[['M26 rocket','M26 火箭'],['9M55 Smerch','9M55 龙卷风']],proj:'rocket', dmg:24, rng:490, rof:6.0, hits:'g',  vs:[.8,1.4],  splash:44, supp:.45, burst:6 },
+  howitzer: { name:['155mm Howitzer','155榴弹'], m:[['155mm M126','155mm M126'],['152mm 2A33','152mm 2A33']],   proj:'bomb',   dmg:40, rng:400, rof:3.0, hits:'g',  vs:[1,1.2], vsH:1.4,   splash:56, supp:.55 },
+  mlrsSalvo:{ name:['Rocket Salvo','火箭弹齐射'], m:[['M26 rocket','M26 火箭'],['9M55 Smerch','9M55 龙卷风']],proj:'rocket', dmg:24, rng:490, rof:6.0, hits:'g',  vs:[.8,1.4], vsH:0.7,  splash:44, supp:.45, burst:6 },
   aam:      { name:['AAM','空空导弹'], m:[['AIM-9 Sidewinder','AIM-9 响尾蛇'],['R-73','R-73']],  proj:'rocket', dmg:58, rng:230, rof:4.2, hits:'a',  vs:[1,1],     acc:.86, supp:.02, ammo:4, minRng:95 },
-  gunpod:   { name:['Autocannon','航炮'], m:[['M61 Vulcan','M61 火神'],['GSh-30-1','GSh-30-1']],      proj:'bullet', dmg:18, rng:145, rof:.52, hits:'ga', vs:[.8,1],    acc:.68, supp:.30, ammo:34 },
-  gatling:  { name:['Gatling','加特林舔地'], m:[['GAU-8 Avenger','GAU-8 复仇者'],['GSh-30-2','GSh-30-2']],proj:'bullet', dmg:30, rng:130, rof:.32, hits:'g',  vs:[1.4,1.1], acc:.62, supp:.70, ammo:54, burst:2 },
-  agRocket: { name:['Air Rockets','对地火箭'], m:[['Hydra 70','九头蛇 70'],['S-8','S-8']],  proj:'rocket', dmg:22, rng:185, rof:2.2, hits:'g',  vs:[.9,1.2],  splash:30, supp:.4, burst:4, ammo:6 },
-  heliAT:   { name:['ATGM Pod','挂载反坦克'], m:[['AGM-114 Hellfire','AGM-114 地狱火'],['9M120 Ataka','9M120 攻击']],proj:'rocket', dmg:44, rng:205, rof:1.8, hits:'g',  vs:[2,.8],    acc:.86, supp:.14, ammo:8, minRng:45 },
+  gunpod:   { name:['Autocannon','航炮'], m:[['M61 Vulcan','M61 火神'],['GSh-30-1','GSh-30-1']],      proj:'bullet', dmg:18, rng:145, rof:.52, hits:'ga', vs:[.8,1], vsH:0.2,    acc:.68, supp:.30, ammo:34 },
+  gatling:  { name:['Gatling','加特林舔地'], m:[['GAU-8 Avenger','GAU-8 复仇者'],['GSh-30-2','GSh-30-2']],proj:'bullet', dmg:30, rng:130, rof:.32, hits:'g',  vs:[1.4,1.1], vsH:1.1, acc:.62, supp:.70, ammo:54, burst:2 },
+  agRocket: { name:['Air Rockets','对地火箭'], m:[['Hydra 70','九头蛇 70'],['S-8','S-8']],  proj:'rocket', dmg:22, rng:185, rof:2.2, hits:'g',  vs:[.9,1.2], vsH:0.9,  splash:30, supp:.4, burst:4, ammo:6 },
+  heliAT:   { name:['ATGM Pod','挂载反坦克'], m:[['AGM-114 Hellfire','AGM-114 地狱火'],['9M120 Ataka','9M120 攻击']],proj:'rocket', dmg:44, rng:205, rof:1.8, hits:'g',  vs:[2,.8], vsH:3.0,    acc:.86, supp:.14, ammo:8, minRng:45 },
   heliGun:  { name:['Chin Gun','机头机炮'], m:[['M230 chain gun','M230 链炮'],['Yak-B 12.7','Yak-B 12.7']],  proj:'bullet', dmg:13, rng:120, rof:.72, hits:'ga', vs:[.4,1.2],  acc:.60, supp:.4, ammo:44, burst:3 },
-  bombLoad: { name:['Bombs','航弹'], m:[['Mk.82','Mk.82'],['FAB-250','FAB-250']],      proj:'drop',   dmg:56, rng:118,  rof:2.6, hits:'g',  vs:[1,1.2],   splash:70, supp:.7, burst:2, ammo:5 },
-  droneMsl: { name:['Guided Missile','精确制导弹'], m:[['AGM-114 Hellfire','AGM-114 地狱火'],['Kh-25','Kh-25']],proj:'rocket', dmg:40, rng:235, rof:3.4, hits:'g',  vs:[1.6,1],   acc:.90, supp:.1, ammo:4, minRng:60 },
-  warhead:  { name:['Warhead','战斗部'], m:[['BGM-109 Tomahawk','BGM-109 战斧'],['Kh-55','Kh-55']],    proj:'ram',    dmg:120,rng:22,  rof:9,   hits:'g',  vs:[1.5,1.5], splash:86, supp:.8 },
+  bombLoad: { name:['Bombs','航弹'], m:[['Mk.82','Mk.82'],['FAB-250','FAB-250']],      proj:'drop',   dmg:56, rng:118,  rof:2.6, hits:'g',  vs:[1,1.2], vsH:1.4,   splash:70, supp:.7, burst:2, ammo:5 },
+  droneMsl: { name:['Guided Missile','精确制导弹'], m:[['AGM-114 Hellfire','AGM-114 地狱火'],['Kh-25','Kh-25']],proj:'rocket', dmg:48, rng:235, rof:3.4, hits:'g',  vs:[1.6,1], vsH:2.8,   acc:.90, supp:.1, ammo:4, minRng:60 },
+  warhead:  { name:['Warhead','战斗部'], m:[['BGM-109 Tomahawk','BGM-109 战斧'],['Kh-55','Kh-55']],    proj:'ram',    dmg:120,rng:22,  rof:9,   hits:'g',  vs:[1.5,1.5], vsH:6.0, splash:86, supp:.8 },
 };
 
 /* ══════════════════════════ 编制表 ══════════════════════════
@@ -344,7 +345,7 @@ const UNITS = {
   mg:    { name:['MG Team','机枪班'], m:[['M240 Team','M240 机枪组'],['PKM Team','PKM 机枪组']], sub:['Suppressing fire','三连发压制'], k:'2', bar:21, layer:'g', hp:46,  spd:15, armor:0, h:18, w:['hmg'],               aggr:1, weight:16 },
   sniper:{ name:['Sniper','狙击手'], m:[['M24 Sniper','M24 狙击手'],['SVD Sniper','SVD 狙击手']], sub:['Anti-infantry','专杀步兵'],   k:'3', bar:14, layer:'g', hp:26,  spd:18, armor:0, h:12, w:['srifle'],            weight:8 },
   atgm:  { name:['ATGM Team','反坦克组'], m:[['Javelin Team','标枪小组'],['Fagot Team','婴儿小组']],sub:['Missile + rifle','导弹+自卫枪'],k:'4', bar:25, layer:'g', hp:40,  spd:15, armor:0, h:22, w:['atgmMsl','rifle'],   weight:11 },
-  tank:  { name:['MBT','主战坦克'], m:[['M1A1 Abrams','M1A1 艾布拉姆斯'],['T-72','T-72']],sub:['Main gun + coax','主炮+同轴枪'],k:'5', bar:30, layer:'g', hp:195, spd:15, armor:1, h:16, w:['tankGun','coax'],    aggr:1, weight:18 },
+  tank:  { name:['MBT','主战坦克'], m:[['M1A1 Abrams','M1A1 艾布拉姆斯'],['T-72','T-72']],sub:['Main gun + coax','主炮+同轴枪'],k:'5', bar:30, layer:'g', hp:235, spd:15, armor:2, h:16, w:['tankGun','coax'],    aggr:1, weight:18 },
   ifv:   { name:['IFV','步战车'], m:[['M2 Bradley','M2 布雷德利'],['BMP-2','BMP-2']], sub:['Autocannon + ATGM','机炮+反坦克'],k:'6', bar:21, layer:'g', hp:112, spd:31, armor:1, h:14, w:['autocan','vehAtgm'], aggr:1, weight:14 },
   aa:    { name:['AA Gun','高射炮'], m:[['M163 Vulcan','M163 火神'],['ZSU-23-4 Shilka','ZSU-23-4 石勒喀']], sub:'近程弹幕',   k:'7', bar:34, layer:'g', hp:95,  spd:12, armor:1, h:16, w:['flakGun'], hold:210, weight:11 },
   sam:   { name:['SAM','防空导弹'], m:[['MIM-104 Patriot','MIM-104 爱国者'],['S-300','S-300']],sub:['Long-range AA','远程猎机'],   k:'8', bar:34, layer:'g', hp:88,  spd:10, armor:1, h:18, w:['samMsl'],  hold:300, weight:8 },
@@ -402,8 +403,10 @@ for (const k in UNITS) {
   if (d.layer === 'a' && !d.wing) d.wing = 'fixed';   // 只有旋翼能悬停
 }
 const GROUND = ['inf','mg','sniper','atgm','tank','ifv','aa','sam','arty','mlrs','supply','medic','para'];
-const AIR = ['fig','atk','heli','bmb','drone','cruise'];
-const ALL = GROUND.concat(AIR);
+const AIR = ['fig','atk','heli','bmb','drone'];
+/* 奇观级：超规格的东西单成一类 —— 巡航导弹是战役级兵器，不是一架飞机 */
+const SPECT = ['cruise'];
+const ALL = GROUND.concat(AIR, SPECT);
 const SIDE_COL = ['#2f4f9e', '#b7332f'];      // NATO 蓝 / 苏联红
 const SIDE_NAME = [['US Army','美军'], ['Red Army','苏军']];
 const RANK_NAME = [['',''], ['Veteran','老兵'], ['Elite','精锐']];
@@ -644,7 +647,12 @@ function beep(type) {
 
 /* ══════════════════════════ 战斗：查询 ══════════════════════════ */
 const canHit = (a, b) => a.d.hitAny.indexOf(b.d.layer) >= 0;
-const dmgTo = (p, v) => p.dmg * (v.d.armor ? p.vs[0] : p.vs[1]);
+/* 装甲有两级：armor 1 = 飞机和轻装甲车辆，armor 2 = 坦克这类重甲。
+   同一个 vs[0] 本来要同时管"打飞机"和"打坦克"——所以战斗机机枪不得不给到
+   0.7 才打得动空战，代价是它顺手也能凿穿坦克。vsH 把重甲单拎出来，缺省
+   回落到 vs[0]，没标 vsH 的武器一个数都没变 */
+const armMul = (p, v) => (v.d.armor > 1 && p.vsH !== undefined) ? p.vsH : p.vs[0];
+const dmgTo = (p, v) => p.dmg * (v.d.armor ? armMul(p, v) : p.vs[1]);
 const dist3 = (a, b) => Math.hypot(b.wx - a.wx, (b.wz - a.wz) * DEPTH, (b.alt || 0) - (a.alt || 0));
 const distG = (a, b) => Math.hypot(b.wx - a.wx, (b.wz - a.wz) * DEPTH);
 /* 老兵修正：精度、装填、抗打击 */
@@ -686,7 +694,7 @@ function pickWeapon(u, t, dist) {
        三维距离，175 的巡航高度直接吃掉了 154 的射程，轰炸机永远投不了弹 */
     const dw = W.proj === 'drop' ? distG(u, t) : dist;
     if (dw > W.rng || dw < W.minRng) continue;
-    let eff = W.dmg * (t.d.armor ? W.vs[0] : W.vs[1]) * (W.burst || 1) / W.rof;
+    let eff = W.dmg * (t.d.armor ? armMul(W, t) : W.vs[1]) * (W.burst || 1) / W.rof;
     if (!t.d.armor && W.vs[0] / W.vs[1] > 2) eff *= .45;   // 反装甲弹别去点步兵
     if (W.splash) {                                        // 溅射弹按目标周围人堆加权
       let cluster = 0;
@@ -1167,8 +1175,9 @@ function detonate(u) {
 /* 造成伤害：装甲面前轻武器会跳弹（期望伤害不变，但看着有戏） */
 function applyDamage(p, v) {
   let dmg;
-  if (v.d.armor && p.vs[0] < 1) {
-    if (Math.random() > p.vs[0]) {                  // 打不穿 → 跳弹
+  const am = v.d.armor ? armMul(p, v) : 1;
+  if (v.d.armor && am < 1) {
+    if (Math.random() > am) {                  // 打不穿 → 跳弹
       fx.push({ k: 'ric', wx: p.ex, wz: p.ez, alt: p.ea, t: 0, dur: .3, sd: p.sd });
       beep('ric');
       v.sup = Math.min(1.5, v.sup + .06);
@@ -2091,7 +2100,7 @@ cv.addEventListener('pointerleave', () => { drawing = 0; hover.on = 0; });
 
 /* 兵种按钮 */
 function buildTools() {
-  ['rowG', 'rowA'].forEach(id => $(id).querySelectorAll('button').forEach(b => b.remove()));
+  ['rowG', 'rowA', 'rowS'].forEach(id => $(id).querySelectorAll('button').forEach(b => b.remove()));
   const mk = (list, row) => list.forEach(k => {
     const d = UNITS[k], b = document.createElement('button');
     b.innerHTML = L(d.name) + '<small>' + d.k.toUpperCase() + ' ' + L(d.sub) + '</small>';
@@ -2107,7 +2116,7 @@ function buildTools() {
     b.onclick = () => selTool(k);
     row.appendChild(b);
   });
-  mk(GROUND, $('rowG')); mk(AIR, $('rowA'));
+  mk(GROUND, $('rowG')); mk(AIR, $('rowA')); mk(SPECT, $('rowS'));
 }
 function selTool(k) {
   curTool = k;
@@ -2151,6 +2160,7 @@ function applyLang() {
   $('langBtn').textContent = lang === 'zh' ? 'EN' : '中';
   $('rowG').firstElementChild.textContent = T('ground');
   $('rowA').firstElementChild.textContent = T('air');
+  $('rowS').firstElementChild.textContent = T('spect');
   $('rowC').firstElementChild.textContent = T('orders');
   document.querySelectorAll('.side').forEach(x => x.textContent = L(SIDE_NAME[+x.dataset.side]));
   buildTools(); buildCmds();
