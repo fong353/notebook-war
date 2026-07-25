@@ -423,6 +423,14 @@ let running = true, speed = 1, autoRe = true, sound = true, showGrid = true;
 let curSide = 0, curTool = 'inf';
 let over = false, reTimer = 0, tick = 0;
 let logs = [], lastFavored = -1;
+/* 预备队：自动增援每补一个就扣一个，扣光了这一方就再也变不出兵来。
+   没有它的话，战力跌破 45% 的兜底会一直补，你把对手压得越死它补得越凶，
+   结果就是永远打不完（Nate 踩到的正是这个）。玩家手画的部队不占这个额度。 */
+let reserve = [150, 150], reserve0 = 150;
+try {
+  const q = +(new URLSearchParams(location.search).get('reserve'));
+  if (q >= 10 && q <= 999) { reserve = [q, q]; reserve0 = q; }
+} catch (e) { }
 /* Target strength per side. 17 is the value where you can still tell who is shooting whom;
    ?units=40 and the like stage a mass engagement (screenshots, demos) */
 let FIELD_TARGET = clamp(+(new URLSearchParams(location.search).get('units') || 17), 4, 60);
@@ -566,8 +574,11 @@ function counterKey(side) {
   return weightedKey();
 }
 function reinforce(side, key) {
+  if (reserve[side] <= 0) return false;              // 预备队见底
+  reserve[side]--;
   spawn(side, key || counterKey(side),
         side === 0 ? rnd(-20, 90) : rnd(WORLD_W - 90, WORLD_W + 20), rnd(.05, .95));
+  return true;
 }
 function initArmies() {
   const plan = ['inf','inf','inf','mg','sniper','tank','ifv','atgm','aa','sam',
@@ -587,33 +598,50 @@ function initArmies() {
 }
 
 /* ══════════════════════════ SOUND ══════════════════════════ */
-let AC = null;
+let AC = null, master = null, recent = [];
+/* 一堆单位同时阵亡时，十几个爆炸声叠在一起就会削波破音（胜利那一刻最典型，
+   因为最后一批往往是被同一发奇观一次清掉的）。三道保险：
+   压缩器兜住峰值、150ms 内最多放 4 个爆炸、单发音量也压低一档。 */
+function audioCtx() {
+  if (!AC) {
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    const comp = AC.createDynamicsCompressor();
+    comp.threshold.value = -20; comp.knee.value = 14; comp.ratio.value = 14;
+    comp.attack.value = .003; comp.release.value = .15;
+    master = AC.createGain(); master.gain.value = .5;
+    master.connect(comp); comp.connect(AC.destination);
+  }
+  if (AC.state === 'suspended') AC.resume();
+  return AC;
+}
 function beep(type) {
   if (!sound) return;
   try {
-    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
-    if (AC.state === 'suspended') AC.resume();       // 浏览器要等用户先交互过
-    const t = AC.currentTime, g = AC.createGain();
-    g.connect(AC.destination);
+    const ac = audioCtx(), t = ac.currentTime;
+    recent = recent.filter(x => t - x < .15);
+    if (recent.length >= 4) return;              // 这一瞬间已经够吵了，再叠只会破音
+    recent.push(t);
+    const g = ac.createGain();
+    g.connect(master);
     if (type === 'boom') {
-      const n = 5000, b = AC.createBuffer(1, n, 44100), ch = b.getChannelData(0);
+      const n = 5000, b = ac.createBuffer(1, n, 44100), ch = b.getChannelData(0);
       for (let i = 0; i < n; i++) ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2);
-      const s = AC.createBufferSource(); s.buffer = b;
-      const f = AC.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 620;
-      s.connect(f); f.connect(g); g.gain.value = .18; s.start(t);
-    } else if (type === 'ric') {                  // Ricochet: a sharp downward chirp
-      const o = AC.createOscillator();
+      const s = ac.createBufferSource(); s.buffer = b;
+      const f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 620;
+      s.connect(f); f.connect(g); g.gain.value = .12; s.start(t);
+    } else if (type === 'ric') {
+      const o = ac.createOscillator();
       o.type = 'triangle';
       o.frequency.setValueAtTime(1800, t);
       o.frequency.exponentialRampToValueAtTime(600, t + .16);
-      g.gain.setValueAtTime(.05, t); g.gain.exponentialRampToValueAtTime(.001, t + .18);
+      g.gain.setValueAtTime(.035, t); g.gain.exponentialRampToValueAtTime(.001, t + .18);
       o.connect(g); o.start(t); o.stop(t + .19);
     } else {
-      const o = AC.createOscillator();
+      const o = ac.createOscillator();
       o.type = type === 'shot' ? 'square' : 'sawtooth';
       o.frequency.setValueAtTime(type === 'shot' ? 900 : 380, t);
       o.frequency.exponentialRampToValueAtTime(150, t + (type === 'shot' ? .06 : .18));
-      g.gain.setValueAtTime(.04, t); g.gain.exponentialRampToValueAtTime(.001, t + .2);
+      g.gain.setValueAtTime(.028, t); g.gain.exponentialRampToValueAtTime(.001, t + .2);
       o.connect(g); o.start(t); o.stop(t + .21);
     }
   } catch (e) { }
@@ -1077,9 +1105,11 @@ function update(dt) {
   }
   units = units.filter(u => u.hp > 0);
 
-  if (!autoRe && !over && tick > 1.5) {
+  if (!over && tick > 1.5) {
     let nb = 0, nr = 0;
     for (const u of units) u.side === 0 ? nb++ : nr++;
+    /* 打光场上的、也打光预备队的，才算真的败了 */
+    if (autoRe) { if (nb > 0 || reserve[0] > 0) nb = 1; if (nr > 0 || reserve[1] > 0) nr = 1; }
     if (nb === 0 || nr === 0) {
       over = true; running = false;
       const win = nb > 0 ? 0 : (nr > 0 ? 1 : -1);
@@ -2013,7 +2043,8 @@ function loop(now) {
   render();
   let nb = 0, nr = 0;
   for (const u of units) u.side === 0 ? nb++ : nr++;
-  $('nb').textContent = nb; $('nr').textContent = nr;
+  $('nb').textContent = nb + (autoRe ? '·' + reserve[0] : '');
+  $('nr').textContent = nr + (autoRe ? '·' + reserve[1] : '');
   $('lb').textContent = lost[0]; $('lr').textContent = lost[1];
   const pw = [power(0), power(1)], tot = pw[0] + pw[1] || 1;
   $('pb').style.width = (pw[0] / tot * 100) + '%';
@@ -2205,6 +2236,7 @@ $('lsb').onclick = () => {
 $('clr').onclick = () => {
   units = []; projs = []; fx = []; wrecks = []; smokes = [];
   lost = [0, 0]; over = false; tick = 0; logs = []; $('log').innerHTML = '';
+  reserve = [reserve0, reserve0];
   scars = null;
   for (const c of CMDS) cmdCd[c.id] = 0;
   hideBanner(); initArmies();

@@ -332,7 +332,7 @@ const WPN = {
   fighterGun:{name:['Wing Guns','机翼武器'],  m:[['MG151/20','MG151/20'],['6× M2 .50 cal','6×M2 .50'],['ShVAK 20mm','ShVAK 20mm']],                  proj:'bullet', dmg:16, rng:140, rof:.50, hits:'ga', vs:[.7,1],    acc:.66, supp:.28, ammo:36, burst:2 },
   attackGun:{ name:['Strafing Guns','扫射机炮'],m:[['MG17 + 37mm','MG17 + 37mm'],['8× M2 .50 cal','8×M2 .50'],['VYa-23','VYa-23']],                  proj:'bullet', dmg:28, rng:130, rof:.34, hits:'g',  vs:[1.5,1.1], acc:.62, supp:.66, ammo:48, burst:2 },
   agRocket: { name:['Air Rockets','对地火箭'],m:[['Wfr.Gr.21','Wfr.Gr.21'],['HVAR 5in','HVAR 5 吋'],['RS-82','RS-82']],                              proj:'rocket', dmg:22, rng:170, rof:2.2, hits:'g',  vs:[.9,1.2],  splash:30, supp:.4, burst:4, ammo:6 },
-  railGun:  { name:['Siege Gun','攻城炮'],  m:[['80cm Gustav Shell','80cm 古斯塔夫炮弹'],['240mm M1 Shell','240mm M1 炮弹'],['203mm B-4 Shell','203mm B-4 炮弹']], proj:'bomb', dmg:130, rng:640, rof:11.0, hits:'g', vs:[1.4,1.5], splash:125, supp:1.4 },
+  railGun:  { name:['Siege Shell','攻城炮弹'],  m:[['80cm Gustav Shell','80cm 古斯塔夫炮弹'],['240mm M1 Shell','240mm M1 炮弹'],['203mm B-4 Shell','203mm B-4 炮弹']], proj:'bomb', dmg:130, rng:640, rof:11.0, hits:'g', vs:[1.4,1.5], splash:125, supp:1.4 },
   v1Warhead:{ name:['Warhead','战斗部'], m:[['V-1 Warhead','V-1 战斗部'],['Warhead','战斗部'],['Warhead','战斗部']], proj:'ram', dmg:210, rng:22, rof:9, hits:'g', vs:[1.4,1.5], splash:150, supp:1.6 },
   bombLoad: { name:['Bombs','航弹'],          m:[['SC 250','SC 250'],['M64 500lb','M64 500 磅'],['FAB-100','FAB-100']],                              proj:'drop',   dmg:56, rng:118,  rof:2.6, hits:'g',  vs:[1,1.2],   splash:70, supp:.7, burst:2, ammo:5 },
 };
@@ -353,12 +353,12 @@ const UNITS = {
   mlrs:  { name:['Rockets','火箭炮'],    sub:['6-round salvo','6发齐射'],        k:'0', m:[['Nebelwerfer 41','烟雾发射器 41'],['T34 Calliope','T34 卡利俄佩'],['BM-13 Katyusha','BM-13 喀秋莎']],     bar:28, layer:'g', hp:92,  spd:7,  armor:1, h:18, w:['mlrsSalvo'],         weight:7 },
   supply:{ name:['Supply','补给车'],     sub:['Unsuppress + reload','解压制·快装填'], k:'u', m:[['Opel Blitz','欧宝闪电'],['GMC CCKW','GMC CCKW'],['ZiS-5 Supply','ZiS-5 补给车']],                   bar:19, layer:'g', hp:80,  spd:20, armor:1, h:16, w:[], hold:250, support:'supply', weight:8 },
   medic: { name:['Medic','卫生兵'],      sub:['Heals wounded','救治伤员'],       k:'i', m:[['Sanitäter','德军卫生兵'],['US Medic','美军医护兵'],['Saninstruktor','卫生指导员']],                       bar:25, layer:'g', hp:36,  spd:24, armor:0, h:22, w:[], hold:190, support:'medic',  weight:8 },
-  rail:  { name:['Railway Gun','列车炮'], sub:['Siege piece · reaches anywhere','攻城重炮·打遍全图'], k:'-', bar:34, m:[['80cm Schwerer Gustav','80cm 古斯塔夫'],['240mm M1 Black Dragon','240mm 黑龙'],['203mm B-4','203mm B-4']], layer:'g', hp:190, spd:3, armor:1, h:20, w:['railGun'], hold:560, weight:3 },
+  rail:  { name:['Siege Gun','攻城炮'], sub:['Reaches anywhere on the map','攻城重炮·打遍全图'], k:'-', bar:34, m:[['80cm Schwerer Gustav','80cm 古斯塔夫'],['240mm M1 Black Dragon','240mm 黑龙'],['203mm B-4','203mm B-4']], layer:'g', hp:190, spd:3, armor:1, h:20, w:['railGun'], hold:560, weight:3 },
   /* Paratroopers drift down under canopy and only fight once they land. weight 0 keeps them
      out of the reinforcement pool, so they never just appear on the ground */
   para:  { name:['Paratrooper','伞兵'],  sub:['Airborne · elite','空降·精锐'],   k:'p', m:[['Fallschirmjäger','德军伞兵'],['82nd Airborne','82 空降师'],['VDV Airborne','苏军空降兵']],              bar:27, layer:'g', hp:44,  spd:28, armor:0, h:24, w:['rifle','grenade'], aggr:1, weight:0 },
 
-  v1:    { name:['V-1','V-1 飞弹'], sub:['One-way · can be shot down','一次性·可被击落'], k:'\\', bar:12, m:[['V-1 Flying Bomb','V-1 飞弹'],['V-1','V-1'],['V-1','V-1']], layer:'a', hp:40, spd:62, armor:0, h:8, w:['v1Warhead'], alt:150, fuel:0, suicide:1, weight:0 },
+  v1:    { name:['V-1','V-1 飞弹'], sub:['One-way · can be shot down','一次性·可被击落'], k:'\\', bar:12, m:[['V-1 Flying Bomb','V-1 飞弹'],['—','—'],['—','—']], layer:'a', hp:40, spd:62, armor:0, h:8, w:['v1Warhead'], alt:150, fuel:0, suicide:1, weight:0 },
   fig:   { name:['Fighter','战斗机'],    sub:['Guns · dogfight','机枪·缠斗'],    k:'q', m:[['Bf 109G','Bf 109G'],['P-51D Mustang','P-51D 野马'],['Yak-3','Yak-3']],                                   bar:15, layer:'a', hp:72,  spd:66, armor:1, h:12, w:['fighterGun'],        alt:250, fuel:55, weight:13 },
   atk:   { name:['Dive Bomber','俯冲轰炸'],sub:['Strafe + rockets','扫射+火箭'], k:'w', m:[['Ju 87 Stuka','Ju 87 斯图卡'],['P-47D Thunderbolt','P-47D 雷电'],['Il-2 Sturmovik','Il-2 施图莫维克']],   bar:17, layer:'a', hp:118, spd:46, armor:1, h:14, w:['attackGun','agRocket'], alt:95, fuel:50, weight:12 },
   bmb:   { name:['Bomber','轰炸机'],     sub:['Carpet bombing','地毯轰炸'],      k:'r', m:[['He 111','He 111'],['B-17G Flying Fortress','B-17G 空中堡垒'],['Pe-2','Pe-2']],                           bar:19, layer:'a', hp:155, spd:36, armor:1, h:16, w:['bombLoad'],          alt:175, fuel:52, weight:9 },
@@ -402,7 +402,8 @@ for (const k in UNITS) {
   if (d.layer === 'a' && !d.wing) d.wing = 'fixed';   // Only rotors may hover
 }
 const GROUND = ['inf','mg','sniper','atgm','tank','ifv','aa','sam','arty','mlrs','supply','medic','para','rail'];
-const AIR = ['fig','atk','bmb','v1'];
+const AIR = ['fig','atk','bmb'];
+/* V-1 只由德军奇观投放，不进兵种面板 —— 否则美苏也能手画出 V-1 来 */
 const ALL = GROUND.concat(AIR);
 /* Three WW2 nations, two of them per match. match[side] → index into NATIONS */
 const NATIONS = [
@@ -427,6 +428,14 @@ let running = true, speed = 1, autoRe = true, sound = true, showGrid = true;
 let curSide = 0, curTool = 'inf';
 let over = false, reTimer = 0, tick = 0;
 let logs = [], lastFavored = -1;
+/* 预备队：自动增援每补一个就扣一个，扣光了这一方就再也变不出兵来。
+   没有它的话，战力跌破 45% 的兜底会一直补，你把对手压得越死它补得越凶，
+   结果就是永远打不完（Nate 踩到的正是这个）。玩家手画的部队不占这个额度。 */
+let reserve = [150, 150], reserve0 = 150;
+try {
+  const q = +(new URLSearchParams(location.search).get('reserve'));
+  if (q >= 10 && q <= 999) { reserve = [q, q]; reserve0 = q; }
+} catch (e) { }
 /* Target strength per side. 17 is the value where you can still tell who is shooting whom;
    ?units=40 and the like stage a mass engagement (screenshots, demos) */
 let FIELD_TARGET = clamp(+(new URLSearchParams(location.search).get('units') || 17), 4, 60);
@@ -570,8 +579,11 @@ function counterKey(side) {
   return weightedKey();
 }
 function reinforce(side, key) {
+  if (reserve[side] <= 0) return false;              // 预备队见底
+  reserve[side]--;
   spawn(side, key || counterKey(side),
         side === 0 ? rnd(-20, 90) : rnd(WORLD_W - 90, WORLD_W + 20), rnd(.05, .95));
+  return true;
 }
 function initArmies() {
   const plan = ['inf','inf','inf','mg','sniper','tank','ifv','atgm','aa','sam',
@@ -591,33 +603,50 @@ function initArmies() {
 }
 
 /* ══════════════════════════ SOUND ══════════════════════════ */
-let AC = null;
+let AC = null, master = null, recent = [];
+/* 一堆单位同时阵亡时，十几个爆炸声叠在一起就会削波破音（胜利那一刻最典型，
+   因为最后一批往往是被同一发奇观一次清掉的）。三道保险：
+   压缩器兜住峰值、150ms 内最多放 4 个爆炸、单发音量也压低一档。 */
+function audioCtx() {
+  if (!AC) {
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    const comp = AC.createDynamicsCompressor();
+    comp.threshold.value = -20; comp.knee.value = 14; comp.ratio.value = 14;
+    comp.attack.value = .003; comp.release.value = .15;
+    master = AC.createGain(); master.gain.value = .5;
+    master.connect(comp); comp.connect(AC.destination);
+  }
+  if (AC.state === 'suspended') AC.resume();
+  return AC;
+}
 function beep(type) {
   if (!sound) return;
   try {
-    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
-    if (AC.state === 'suspended') AC.resume();       // 浏览器要等用户先交互过
-    const t = AC.currentTime, g = AC.createGain();
-    g.connect(AC.destination);
+    const ac = audioCtx(), t = ac.currentTime;
+    recent = recent.filter(x => t - x < .15);
+    if (recent.length >= 4) return;              // 这一瞬间已经够吵了，再叠只会破音
+    recent.push(t);
+    const g = ac.createGain();
+    g.connect(master);
     if (type === 'boom') {
-      const n = 5000, b = AC.createBuffer(1, n, 44100), ch = b.getChannelData(0);
+      const n = 5000, b = ac.createBuffer(1, n, 44100), ch = b.getChannelData(0);
       for (let i = 0; i < n; i++) ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2);
-      const s = AC.createBufferSource(); s.buffer = b;
-      const f = AC.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 620;
-      s.connect(f); f.connect(g); g.gain.value = .18; s.start(t);
-    } else if (type === 'ric') {                  // Ricochet: a sharp downward chirp
-      const o = AC.createOscillator();
+      const s = ac.createBufferSource(); s.buffer = b;
+      const f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 620;
+      s.connect(f); f.connect(g); g.gain.value = .12; s.start(t);
+    } else if (type === 'ric') {
+      const o = ac.createOscillator();
       o.type = 'triangle';
       o.frequency.setValueAtTime(1800, t);
       o.frequency.exponentialRampToValueAtTime(600, t + .16);
-      g.gain.setValueAtTime(.05, t); g.gain.exponentialRampToValueAtTime(.001, t + .18);
+      g.gain.setValueAtTime(.035, t); g.gain.exponentialRampToValueAtTime(.001, t + .18);
       o.connect(g); o.start(t); o.stop(t + .19);
     } else {
-      const o = AC.createOscillator();
+      const o = ac.createOscillator();
       o.type = type === 'shot' ? 'square' : 'sawtooth';
       o.frequency.setValueAtTime(type === 'shot' ? 900 : 380, t);
       o.frequency.exponentialRampToValueAtTime(150, t + (type === 'shot' ? .06 : .18));
-      g.gain.setValueAtTime(.04, t); g.gain.exponentialRampToValueAtTime(.001, t + .2);
+      g.gain.setValueAtTime(.028, t); g.gain.exponentialRampToValueAtTime(.001, t + .2);
       o.connect(g); o.start(t); o.stop(t + .21);
     }
   } catch (e) { }
@@ -1083,9 +1112,11 @@ function update(dt) {
   }
   units = units.filter(u => u.hp > 0);
 
-  if (!autoRe && !over && tick > 1.5) {
+  if (!over && tick > 1.5) {
     let nb = 0, nr = 0;
     for (const u of units) u.side === 0 ? nb++ : nr++;
+    /* 打光场上的、也打光预备队的，才算真的败了 */
+    if (autoRe) { if (nb > 0 || reserve[0] > 0) nb = 1; if (nr > 0 || reserve[1] > 0) nr = 1; }
     if (nb === 0 || nr === 0) {
       over = true; running = false;
       const win = nb > 0 ? 0 : (nr > 0 ? 1 : -1);
@@ -1539,27 +1570,29 @@ const DRAW = {
     if (u.flash > .6) rline(2 + Math.cos(el) * 15, y - 8 - Math.sin(el) * 15,
                             2 + Math.cos(el) * 27, y - 8 - Math.sin(el) * 27, 5);
   },
-  /* Railway gun: a gun too big for wheels, so it rides on rails */
+  /* Siege gun on a rail carriage: long flat deck, bogies at each end, and a barrel
+     that dwarfs it. The track itself is drawn on the ground layer, running in depth. */
   rail(u, n) {
-    const y = -8, el = Math.max(.35, u.aimEl);
-    ctx.lineWidth *= .8;                                            // rails and sleepers
-    rline(-30, y + 9, 30, y + 9); rline(-30, y + 11, 30, y + 11);
-    for (let i = 0; i < 9; i++) rline(-28 + i * 7, y + 8, -28 + i * 7, y + 12, 1);
+    const y = -9, el = Math.max(.3, u.aimEl);
+    rpoly([[-32, y + 7], [-31, y], [27, y], [30, y + 7]], true);          // flat deck
+    ctx.lineWidth *= .8;
+    rline(-31, y + 3, 28, y + 3);                                          // deck rib
     ctx.lineWidth /= .8;
-    rpoly([[-24, y + 8], [-24, y], [20, y], [22, y + 8]], true);     // carriage
-    if (n === 2) sh(-22, y, 42, 8, 10);
-    for (let i = 0; i < 6; i++) rcirc(-20 + i * 7, y + 8, 2.6);      // bogies
-    rpoly([[-8, y], [-6, y - 9], [6, y - 9], [8, y]], true);         // mount
-    ctx.lineWidth *= 2.6;
-    const e = barrel(2, y - 7, n === 2 ? 34 : 30, el, u.face);       // the barrel is the point
-    ctx.lineWidth /= 2.6;
-    rline(-6, y - 6, -14, y - 1);                                    // recoil spade
-    mark(-16, y + 4, 2.6, n);
+    for (let i = 0; i < 4; i++) { rcirc(-26 + i * 5.5, y + 9, 2.3); rcirc(12 + i * 5.5, y + 9, 2.3); }
+    rpoly([[-26, y + 7], [-6, y + 7], [-6, y + 11], [-26, y + 11]], true); // bogie frames
+    rpoly([[10, y + 7], [30, y + 7], [30, y + 11], [10, y + 11]], true);
+    rpoly([[-12, y], [-10, y - 12], [9, y - 12], [11, y]], true);          // gun cradle
+    rline(-12, y - 6, -20, y - 2);                                         // recoil spade
+    ctx.lineWidth *= 3;
+    const e = barrel(2, y - 10, n === 2 ? 40 : 36, el, u.face);            // the barrel is the whole point
+    ctx.lineWidth /= 3;
+    rcirc(e[0] - Math.cos(el) * 6, e[1] + Math.sin(el) * 6, 2.2);          // muzzle band
+    mark(-20, y - 4, 2.6, n);
     if (u.flash > .4) {
-      rcirc(e[0] + Math.cos(el) * 8, e[1] - Math.sin(el) * 8, 9, 5);
-      ctx.lineWidth *= 2;
-      rline(e[0], e[1], e[0] + Math.cos(el) * 18, e[1] - Math.sin(el) * 18, 3);
-      ctx.lineWidth /= 2;
+      rcirc(e[0] + Math.cos(el) * 10, e[1] - Math.sin(el) * 10, 11, 6);
+      ctx.lineWidth *= 2.4;
+      rline(e[0], e[1], e[0] + Math.cos(el) * 22, e[1] - Math.sin(el) * 22, 3);
+      ctx.lineWidth /= 2.4;
     }
   },
   supply(u, n) {
@@ -1946,6 +1979,23 @@ function drawSmoke(s) {
   }
   ctx.restore();
 }
+/* The track a siege gun sits on: laid in depth, so perspective turns it into a
+   long line running back towards the vanishing point */
+function drawRailTrack(u) {
+  ctx.save();
+  seed(u.sd + 11); ctx.lineCap = 'round';
+  const N = 15, gauge = 8 * K, a = [], b = [];
+  for (let i = 0; i <= N; i++) {
+    const wz = .02 + (i / N) * .96;
+    a.push(proj(u.wx - gauge, wz, 0));
+    b.push(proj(u.wx + gauge, wz, 0));
+  }
+  ctx.globalAlpha = .34; ctx.strokeStyle = '#6f6a5c'; ctx.lineWidth = 1.1;
+  for (let i = 0; i <= N; i++) rline(a[i][0], a[i][1], b[i][0], b[i][1], 1);   // sleepers
+  ctx.globalAlpha = .46; ctx.lineWidth = 1.5;
+  rpoly(a, false, 1.1); rpoly(b, false, 1.1);                                   // the two rails
+  ctx.restore();
+}
 function drawWork(w) {
   ctx.save(); seed(w.sd); ctx.lineCap = 'round';
   if (w.kind === 'trench') {
@@ -2060,6 +2110,7 @@ const zbuf = [];
 function render() {
   mainCtx.save();
   drawPaper();
+  for (const u of units) if (u.d.key === 'rail' && u.hp > 0) drawRailTrack(u);
   for (const w of works) drawWork(w);
   zbuf.length = 0;
   for (const w of wrecks) zbuf.push([w.wz, 0, w]);
@@ -2114,7 +2165,8 @@ function loop(now) {
   render();
   let nb = 0, nr = 0;
   for (const u of units) u.side === 0 ? nb++ : nr++;
-  $('nb').textContent = nb; $('nr').textContent = nr;
+  $('nb').textContent = nb + (autoRe ? '·' + reserve[0] : '');
+  $('nr').textContent = nr + (autoRe ? '·' + reserve[1] : '');
   $('lb').textContent = lost[0]; $('lr').textContent = lost[1];
   const pw = [power(0), power(1)], tot = pw[0] + pw[1] || 1;
   $('pb').style.width = (pw[0] / tot * 100) + '%';
@@ -2306,6 +2358,7 @@ $('lsb').onclick = () => {
 $('clr').onclick = () => {
   units = []; projs = []; fx = []; wrecks = []; smokes = [];
   lost = [0, 0]; over = false; tick = 0; logs = []; $('log').innerHTML = '';
+  reserve = [reserve0, reserve0];
   scars = null;
   for (const c of CMDS) cmdCd[c.id] = 0;
   hideBanner(); initArmies();
