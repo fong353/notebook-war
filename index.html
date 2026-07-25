@@ -244,34 +244,34 @@ const WPN = {
   grenade:  { name:'手雷',      proj:'bomb',   dmg:16, rng:58,  rof:4.5, hits:'g',  vs:[.6,1.4],  splash:26, supp:.3 },
   hmg:      { name:'重机枪',    proj:'bullet', dmg:4,  rng:135, rof:.55, hits:'ga', vs:[.3,1.25], acc:.52, supp:.2,  burst:3 },
   srifle:   { name:'狙击枪',    proj:'bullet', dmg:30, rng:265, rof:2.2, hits:'g',  vs:[.12,3],   acc:.93, supp:.05 },
-  atgmMsl:  { name:'反坦克导弹',proj:'rocket', dmg:56, rng:245, rof:2.6, hits:'g',  vs:[2.2,.5],  acc:.88, supp:.12 },
+  atgmMsl:  { name:'反坦克导弹',proj:'rocket', dmg:56, rng:245, rof:2.6, hits:'g',  vs:[2.2,.5],  acc:.88, supp:.12, minRng:55 },
   tankGun:  { name:'120主炮',   proj:'shell',  dmg:25, rng:185, rof:1.3, hits:'g',  vs:[1.2,1],   acc:.80, supp:.28 },
   coax:     { name:'同轴机枪',  proj:'bullet', dmg:4,  rng:112, rof:.45, hits:'ga', vs:[.25,1.3], acc:.60, supp:.18, burst:3 },
   autocan:  { name:'30机炮',    proj:'bullet', dmg:8,  rng:155, rof:.28, hits:'ga', vs:[.55,1.3], acc:.60, supp:.16 },
   flakGun:  { name:'高炮弹幕',  proj:'flak',   dmg:20, rng:215, rof:.45, hits:'a',  vs:[1,1],     acc:.48, supp:.05, burst:2 },
-  samMsl:   { name:'防空导弹',  proj:'rocket', dmg:72, rng:430, rof:3.2, hits:'a',  vs:[1,1],     acc:.85, supp:.02 },
+  samMsl:   { name:'防空导弹',  proj:'rocket', dmg:72, rng:430, rof:3.2, hits:'a',  vs:[1,1],     acc:.85, supp:.02, minRng:130 },
   howitzer: { name:'155榴弹',   proj:'bomb',   dmg:40, rng:400, rof:3.0, hits:'g',  vs:[1,1.2],   splash:56, supp:.55 },
   mlrsSalvo:{ name:'火箭弹齐射',proj:'rocket', dmg:24, rng:490, rof:6.0, hits:'g',  vs:[.8,1.4],  splash:44, supp:.45, burst:6 },
-  aam:      { name:'空空导弹',  proj:'rocket', dmg:58, rng:230, rof:4.2, hits:'a',  vs:[1,1],     acc:.86, supp:.02, ammo:4 },
+  aam:      { name:'空空导弹',  proj:'rocket', dmg:58, rng:230, rof:4.2, hits:'a',  vs:[1,1],     acc:.86, supp:.02, ammo:4, minRng:95 },
   gunpod:   { name:'航炮',      proj:'bullet', dmg:8,  rng:145, rof:.20, hits:'ga', vs:[.8,1],    acc:.68, supp:.14, ammo:70 },
   gatling:  { name:'加特林舔地',proj:'bullet', dmg:13, rng:130, rof:.12, hits:'g',  vs:[1.4,1.1], acc:.62, supp:.34, ammo:140, burst:2 },
   agRocket: { name:'对地火箭',  proj:'rocket', dmg:22, rng:185, rof:2.2, hits:'g',  vs:[.9,1.2],  splash:30, supp:.4, burst:4, ammo:6 },
-  heliAT:   { name:'挂载反坦克',proj:'rocket', dmg:44, rng:205, rof:1.8, hits:'g',  vs:[2,.8],    acc:.86, supp:.14, ammo:8 },
+  heliAT:   { name:'挂载反坦克',proj:'rocket', dmg:44, rng:205, rof:1.8, hits:'g',  vs:[2,.8],    acc:.86, supp:.14, ammo:8, minRng:45 },
   heliGun:  { name:'机头机炮',  proj:'bullet', dmg:6,  rng:120, rof:.35, hits:'ga', vs:[.4,1.2],  acc:.60, supp:.2, ammo:90, burst:3 },
   bombLoad: { name:'航弹',      proj:'drop',   dmg:56, rng:88,  rof:2.6, hits:'g',  vs:[1,1.2],   splash:70, supp:.7, burst:2, ammo:5 },
-  droneMsl: { name:'精确制导弹',proj:'rocket', dmg:40, rng:235, rof:3.4, hits:'g',  vs:[1.6,1],   acc:.90, supp:.1, ammo:4 },
+  droneMsl: { name:'精确制导弹',proj:'rocket', dmg:40, rng:235, rof:3.4, hits:'g',  vs:[1.6,1],   acc:.90, supp:.1, ammo:4, minRng:60 },
   warhead:  { name:'战斗部',    proj:'ram',    dmg:120,rng:22,  rof:9,   hits:'g',  vs:[1.5,1.5], splash:86, supp:.8 },
 };
 
 /* ══════════════════════════ 编制表 ══════════════════════════
    morale 抗压制 · grit 撤退阈值（血量比例）· support 支援类型         */
 const UNITS = {
-  inf:   { name:'步兵',   sub:'步枪+手雷',  k:'1', layer:'g', hp:34,  spd:26, armor:0, h:24, w:['rifle','grenade'],   morale:1,   grit:.28, weight:30 },
-  mg:    { name:'机枪班', sub:'三连发压制', k:'2', layer:'g', hp:46,  spd:15, armor:0, h:18, w:['hmg'],               morale:1.2, grit:.3,  weight:16 },
+  inf:   { name:'步兵',   sub:'步枪+手雷',  k:'1', layer:'g', hp:34,  spd:26, armor:0, h:24, w:['rifle','grenade'],   morale:1,   grit:.28, aggr:1, weight:30 },
+  mg:    { name:'机枪班', sub:'三连发压制', k:'2', layer:'g', hp:46,  spd:15, armor:0, h:18, w:['hmg'],               morale:1.2, grit:.3,  aggr:1, weight:16 },
   sniper:{ name:'狙击手', sub:'专杀步兵',   k:'3', layer:'g', hp:26,  spd:18, armor:0, h:12, w:['srifle'],            morale:.8,  grit:.4,  weight:8 },
   atgm:  { name:'反坦克组',sub:'导弹+自卫枪',k:'4', layer:'g', hp:40,  spd:15, armor:0, h:22, w:['atgmMsl','rifle'],   morale:.9,  grit:.32, weight:11 },
-  tank:  { name:'主战坦克',sub:'主炮+同轴枪',k:'5', layer:'g', hp:195, spd:15, armor:1, h:16, w:['tankGun','coax'],    morale:2.2, grit:.18, weight:18 },
-  ifv:   { name:'步战车', sub:'机炮+反坦克',k:'6', layer:'g', hp:112, spd:31, armor:1, h:14, w:['autocan','atgmMsl'], morale:1.7, grit:.22, weight:14 },
+  tank:  { name:'主战坦克',sub:'主炮+同轴枪',k:'5', layer:'g', hp:195, spd:15, armor:1, h:16, w:['tankGun','coax'],    morale:2.2, grit:.18, aggr:1, weight:18 },
+  ifv:   { name:'步战车', sub:'机炮+反坦克',k:'6', layer:'g', hp:112, spd:31, armor:1, h:14, w:['autocan','atgmMsl'], morale:1.7, grit:.22, aggr:1, weight:14 },
   aa:    { name:'高射炮', sub:'近程弹幕',   k:'7', layer:'g', hp:95,  spd:12, armor:1, h:16, w:['flakGun'], hold:210, morale:1.4, grit:.25, weight:11 },
   sam:   { name:'防空导弹',sub:'远程猎机',   k:'8', layer:'g', hp:88,  spd:10, armor:1, h:18, w:['samMsl'],  hold:300, morale:1.3, grit:.3,  weight:8 },
   arty:  { name:'榴弹炮', sub:'超远溅射',   k:'9', layer:'g', hp:105, spd:8,  armor:1, h:16, w:['howitzer'],          morale:1.5, grit:.3,  weight:9 },
@@ -289,10 +289,14 @@ const UNITS = {
 
 const K = WORLD_W / 800;
 const ROF_K = 1.9;          // 装填时间统一放慢，让每一发看得清、血条掉得住
+/* 观赏性的关键不是把射速调到没动静，而是让单位活得住：
+   弹药照样密集横飞，但一照面死不了，双方才会缠在一起打。 */
+const TOUGH = 2.8;
 for (const n in WPN) {
   const w = WPN[n];
   w.id = n; w.rng *= K;
   if (w.splash) w.splash *= K;
+  w.minRng = (w.minRng || 0) * K;      // 导弹有最小射程，贴身了只能用机炮 → 逼出缠斗
   if (w.acc === undefined) w.acc = 1;
   if (w.supp === undefined) w.supp = .1;
   w.supp *= 2.4;            // 兵力压到 17 后交火更散，压制力再补一档
@@ -301,6 +305,7 @@ for (const n in WPN) {
 for (const k in UNITS) {
   const d = UNITS[k];
   d.key = k; d.spd *= K;
+  d.hp = Math.round(d.hp * TOUGH);
   if (d.hold) d.hold *= K;
   d.ws = d.w.map(n => WPN[n]);
   const rs = d.ws.map(w => w.rng);
@@ -560,7 +565,7 @@ function pickWeapon(u, t, dist) {
     const W = w.d;
     if (w.cd > 0 || w.ammo <= 0) continue;
     if (W.hits.indexOf(t.d.layer) < 0) continue;
-    if (dist > W.rng) continue;
+    if (dist > W.rng || dist < W.minRng) continue;
     let eff = W.dmg * (t.d.armor ? W.vs[0] : W.vs[1]) * (W.burst || 1) / W.rof;
     if (!t.d.armor && W.vs[0] / W.vs[1] > 2) eff *= .45;   // 反装甲弹别去点步兵
     if (W.splash) {                                        // 溅射弹按目标周围人堆加权
@@ -719,7 +724,14 @@ function update(dt) {
              飞机有高度，水平距离趋零时速度会渐近归零，飞机就钉在目标
              头顶不动了（这个 bug 实测抓到过） */
           const dz = t.wz - u.wz;
-          if (dist > u.d.rngMin * .85) {
+          if (t.d.layer === 'a') {
+            /* ── 空中缠斗：咬住对手尾巴，而不是擦身而过 ──
+               双方都往对方身后钻，自然绞成互相追逐的圆圈 */
+            const bx = t.wx - t.face * 78 * K;                // 目标屁股后面
+            const cs = sp * (dist < u.d.rngMin ? .62 : 1);    // 绞在一起就减速盘旋
+            u.wx += Math.sign(bx - u.wx) * cs * dt;
+            u.wz += Math.sign(dz) * Math.min(Math.abs(dz), cs * dt * .7 / DEPTH);
+          } else if (dist > u.d.rngMin * .85) {
             u.wx += Math.sign(t.wx - u.wx) * sp * dt;         // 恒速切入，不做归一化收敛
             u.wz += Math.sign(dz) * Math.min(Math.abs(dz), sp * dt * .5 / DEPTH);
           } else {
@@ -745,7 +757,10 @@ function update(dt) {
         u.wx += dx / d * sp * dt * 1.25;
         u.wz += dz / d * sp * dt * .8 / DEPTH;
       } else {
-        const a = u.anc, stop = (u.d.hold || u.d.rngMax * .9) * u.st;
+        /* 突击兵种顶到近距离打，支援/炮兵才吊在最远射程上 —— 不然
+           大家都停在射程边缘远远对射，永远缠不起来 */
+        const a = u.anc;
+        const stop = (u.d.hold || (u.d.aggr ? u.d.rngMin * .5 : u.d.rngMax * .9)) * u.st;
         if (a) {
           const dx = a.wx - u.wx, dz = (a.wz - u.wz) * DEPTH, d = Math.hypot(dx, dz) || 1;
           if (d > stop) { u.wx += dx / d * sp * dt; u.wz += dz / d * sp * dt * .22 / DEPTH; }
@@ -874,7 +889,7 @@ function update(dt) {
         const kr = u.killer;
         if (kr && kr.hp > 0) {
           kr.kills++; kr.vet += u.d.armor ? 2 : 1;
-          const nr = kr.vet >= 7 ? 2 : (kr.vet >= 3 ? 1 : 0);
+          const nr = kr.vet >= 5 ? 2 : (kr.vet >= 2 ? 1 : 0);   // 缠斗后击杀变稀，门槛跟着降
           if (nr > kr.rank) {
             kr.rank = nr;
             pushLog(SIDE_NAME[kr.side] + kr.d.name + ' 晋升' + RANK_NAME[nr]);
@@ -915,6 +930,8 @@ function shoot(u, t, delay, d3, W) {
     if (t.d.layer === 'a') acc *= (u.d.layer === 'g' ? .62 : .82);
     if (t.d.armor) acc *= 1.18;
     if (t.d.spd > 40 * K) acc *= .82;
+    /* 缠在一起互相机动规避，谁也不好瞄 —— 让狗斗多绞几个回合 */
+    if (t.d.layer === 'a' && u.d.layer === 'a' && (d3 || 0) < 110 * K) acc *= .7;
     if (u.sup > .3) acc *= 1 - u.sup * .35;         // 被压着打，手抖
     if (u.prone > .5) acc *= .82;
     if (t.cover) acc *= .72;                        // 目标躲在掩体后
