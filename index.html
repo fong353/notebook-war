@@ -210,7 +210,9 @@ let SIZEK = 1.3;
 
 const persp = wz => 1 / (1 + wz * PERSP);
 const pnorm = p => (p - P_MIN) / (1 - P_MIN);
-const scaleAt = p => (.5 + .5 * p) * SIZEK;
+/* 缩放压缩过的作弊透视：纯透视会把远处压到 0.47 倍（看不清了），
+   完全不压又显得一样大。取中间：远处约近处的 0.62 倍 */
+const scaleAt = p => (.28 + .72 * p) * SIZEK;
 function proj(wx, wz, alt) {
   const p = persp(wz);
   return [W / 2 + (wx - WORLD_W / 2) * p * XK,
@@ -345,9 +347,9 @@ const RANK_NAME = ['', '老兵', '精锐'];
 const SLOW = .5;
 
 /* ══════════════════════════ 状态 ══════════════════════════ */
-/* covers = 固定的天然掩体（沙袋）· craters = 滚动淘汰的弹坑，两者都能挡子弹。
-   合在一个数组里的话，弹坑的淘汰会把开局的沙袋顶掉 */
-let units = [], projs = [], fx = [], wrecks = [], smokes = [], covers = [], craters = [];
+/* works = 地图预设的工事（壕沟 / 碉堡），只有步兵用得上，车辆照常开过去。
+   弹坑不再算掩体 —— 那是打出来的坑，不该等于修好的阵地 */
+let units = [], projs = [], fx = [], wrecks = [], smokes = [], works = [];
 let uid = 1, lost = [0, 0];
 let running = true, speed = 1, autoRe = true, sound = false, showGrid = true;
 let curSide = 0, curTool = 'inf';
@@ -355,7 +357,7 @@ let over = false, reTimer = 0, tick = 0, shake = 0;
 let logs = [], lastFavored = -1;
 
 /* ══════════════════════════ 纸 & 伤痕层 ══════════════════════════ */
-let paper = null, scars = null;
+let paper = null, scars = null, scarFade = 0;
 function drawPaper() {
   if (!paper || paper.width !== cv.width || paper.grid !== showGrid) {
     paper = document.createElement('canvas');
@@ -437,8 +439,6 @@ function scarCrater(wx, wz, r) {
   }
   ctx.globalAlpha = 1;
   ctx = save;
-  craters.push({ wx, wz, kind: 'crater', r: 26 * K });
-  if (craters.length > 50) craters.shift();
 }
 
 /* ══════════════════════════ 生成 ══════════════════════════ */
@@ -456,7 +456,7 @@ function spawn(side, key, wx, wz) {
     st: rnd(.72, 1.04), flash: 0, done: 0, silent: 0, noloss: 0,
     sup: 0, prone: 0, vet: 0, rank: 0, kills: 0,
     mode: 0, aimEl: 0, boost: 0, cover: null, link: null, smokeT: 0,
-    turnT: 0, orb: Math.random() * 6.3, leg: 0, egress: 0,
+    turnT: 0, orb: Math.random() * 6.3, leg: 0, egress: 0, bunker: null,
   };
   units.push(u);
   return u;
@@ -504,9 +504,14 @@ function initArmies() {
     spawn(0, k, rnd(20, WORLD_W * .26), rnd(.05, .95));
     spawn(1, k, rnd(WORLD_W * .74, WORLD_W - 20), rnd(.05, .95));
   });
-  covers.length = 0; craters.length = 0;
-  for (let i = 0; i < 18; i++)                    // 天然掩体：沙袋垒的散兵坑
-    covers.push({ wx: rnd(120, WORLD_W - 120), wz: rnd(.06, .94), kind: 'bag', r: 24 * K });
+  /* 地图工事：横跨战场的壕沟 + 少数可进驻的碉堡。只有步兵用得上 */
+  works.length = 0;
+  for (let i = 0; i < 7; i++)
+    works.push({ kind: 'trench', wx: 180 + i * (WORLD_W - 360) / 6 + rnd(-45, 45),
+                 wz: rnd(.12, .88), r: 30 * K, half: 105, sd: (Math.random() * 1e6) | 0 });
+  for (let i = 0; i < 4; i++)
+    works.push({ kind: 'bunker', wx: rnd(260, WORLD_W - 260), wz: rnd(.14, .86),
+                 r: 34 * K, cap: 2, users: [], sd: (Math.random() * 1e6) | 0 });
 }
 
 /* ══════════════════════════ 音效 ══════════════════════════ */
@@ -605,18 +610,31 @@ function suppress(wx, wz, r, amount, side) {
     if (d < r) v.sup = Math.min(1.5, v.sup + amount * (1 - d / r) / v.d.morale);
   }
 }
-/* 掩体是步兵专用的：沙袋和弹坑挡得住人，挡不住也用不着车 */
+/* 工事是步兵专用的：车辆照常从上面开过去，既不挡路也不吃掩护 */
 const usesCover = u => u.d.layer === 'g' && !u.d.armor;
-function inCover(u) {
-  for (const c of covers) if (Math.hypot(u.wx - c.wx, (u.wz - c.wz) * DEPTH) < c.r) return c;
-  for (const c of craters) if (Math.hypot(u.wx - c.wx, (u.wz - c.wz) * DEPTH) < c.r) return c;
+function inWork(u) {
+  if (u.bunker) return u.bunker;                       // 已进驻碉堡
+  for (const w of works) {
+    if (w.kind !== 'trench') continue;
+    if (Math.abs(u.wx - w.wx) < w.r && Math.abs(u.wz - w.wz) * DEPTH < w.half) return w;
+  }
   return null;
 }
-function nearestCover(u, maxD) {
+/* 找最近的可用工事：碉堡防护好，给它一点"值得多跑几步"的优惠 */
+function nearestWork(u, maxD) {
   let best = null, bd = maxD;
-  for (const c of covers) { const d = Math.hypot(u.wx - c.wx, (u.wz - c.wz) * DEPTH); if (d < bd) { bd = d; best = c; } }
-  for (const c of craters) { const d = Math.hypot(u.wx - c.wx, (u.wz - c.wz) * DEPTH); if (d < bd) { bd = d; best = c; } }
+  for (const w of works) {
+    if (w.kind === 'bunker' && w.users.length >= w.cap) continue;
+    const d = Math.hypot(u.wx - w.wx, (u.wz - w.wz) * DEPTH) * (w.kind === 'bunker' ? .7 : 1);
+    if (d < bd) { bd = d; best = w; }
+  }
   return best;
+}
+function leaveBunker(u) {
+  if (!u.bunker) return;
+  const i = u.bunker.users.indexOf(u.id);
+  if (i >= 0) u.bunker.users.splice(i, 1);
+  u.bunker = null;
 }
 function pushLog(txt) {
   logs.unshift(txt);
@@ -629,6 +647,19 @@ function pushLog(txt) {
 function update(dt) {
   tick += dt;
   shake = Math.max(0, shake - dt * 2.2);
+  /* 弹坑随时间渐隐：每隔一会儿把整块伤痕层擦掉一点 alpha，
+     老坑被擦的次数多、先淡去，新坑还清楚 */
+  scarFade += dt;
+  if (scarFade > 1.2 && scars) {
+    scarFade = 0;
+    const c = scars.getContext('2d');
+    c.save();
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.globalCompositeOperation = 'destination-out';
+    c.fillStyle = 'rgba(0,0,0,.055)';
+    c.fillRect(0, 0, scars.width, scars.height);
+    c.restore();
+  }
   for (const id in cmdCd) if (cmdCd[id] > 0) cmdCd[id] = Math.max(0, cmdCd[id] - dt);
 
   if (autoRe) {
@@ -668,7 +699,8 @@ function update(dt) {
     const air = u.d.layer === 'a';
     u.flash = Math.max(0, u.flash - dt * 4);
     u.boost = Math.max(0, u.boost - dt);
-    u.sup = Math.max(0, u.sup - dt * (u.cover ? .28 : .15));     // 有掩体压制退得快
+    /* 工事里压制退得快，碉堡里最踏实 */
+    u.sup = Math.max(0, u.sup - dt * (u.cover ? (u.cover.kind === 'bunker' ? .42 : .28) : .15));
     u.retgt -= dt;
 
     /* 卧倒：压制到一定程度步兵就趴下不动了（装甲车辆不趴） */
@@ -676,7 +708,7 @@ function update(dt) {
 
     if (u.retgt <= 0 || !u.tgt || u.tgt.hp <= 0) {
       u.tgt = findTarget(u);
-      if (!air) { u.anc = findAnchor(u); u.cover = usesCover(u) ? inCover(u) : null; }
+      if (!air) { u.anc = findAnchor(u); u.cover = usesCover(u) ? inWork(u) : null; }
       u.retgt = .3 + Math.random() * .3;
     }
     const t = u.tgt, fwd = u.side === 0 ? 1 : -1;
@@ -699,6 +731,9 @@ function update(dt) {
 
     let sp = u.d.spd * (1 - u.sup * .55) * (u.boost ? 1.45 : 1);
     if (hurtTrack) sp *= .45;
+    /* 匍匐速度：趴下后常规推进停了，但爬向工事还得能爬 —— 不然被压制的
+       步兵原地趴着永远进不了掩体（这个死锁实测撞到过） */
+    const crawl = u.d.spd * (1 - u.sup * .3) * .75;
     if (u.prone > .5) sp = 0;
 
     if (air) {
@@ -790,12 +825,23 @@ function update(dt) {
     } else {
       /* ── 地面推进：停在自己最远武器的射程上；被压制/趴下就别动 ── */
       let ck = null;
-      if (usesCover(u) && u.sup > .4 && !u.cover) ck = nearestCover(u, 170 * K);
-      if (ck) {
-        /* 步兵吃到火力，先往最近的沙袋/弹坑里钻，不硬顶着推进 */
+      if (u.bunker) {
+        /* 进驻碉堡：钉在射击孔后面不动，火力一停就出来继续推进 */
+        u.wx = u.bunker.wx + ((u.slot || 0) - (u.bunker.cap - 1) / 2) * 15 * K;
+        u.wz = u.bunker.wz;
+        if (u.sup < .12) leaveBunker(u);
+      } else if (usesCover(u) && u.sup > .4 && !u.cover) ck = nearestWork(u, 190 * K);
+      if (u.bunker) { /* 不动 */ }
+      else if (ck) {
+        /* 步兵吃到火力，先往最近的壕沟/碉堡里钻，不硬顶着推进 */
         const dx = ck.wx - u.wx, dz = (ck.wz - u.wz) * DEPTH, d = Math.hypot(dx, dz) || 1;
-        u.wx += dx / d * sp * dt * 1.25;
-        u.wz += dz / d * sp * dt * .8 / DEPTH;
+        if (ck.kind === 'bunker' && d < ck.r && ck.users.length < ck.cap) {
+          u.slot = ck.users.length;                // 并排站进射击孔
+          ck.users.push(u.id); u.bunker = ck;
+        } else {
+          u.wx += dx / d * crawl * dt * 1.25;
+          u.wz += dz / d * crawl * dt * .8 / DEPTH;
+        }
       } else {
         /* 突击兵种顶到近距离打，支援/炮兵才吊在最远射程上 —— 不然
            大家都停在射程边缘远远对射，永远缠不起来 */
@@ -831,6 +877,7 @@ function update(dt) {
     /* 别叠成一坨 */
     for (const v of units) {
       if (v === u || v.hp <= 0 || v.d.layer !== u.d.layer) continue;
+      if (u.bunker || v.bunker) continue;          // 碉堡里的别被顶出去
       const dx = v.wx - u.wx, dz = (v.wz - u.wz) * DEPTH, da = (v.alt || 0) - (u.alt || 0);
       const md = air ? 62 : 40;
       if (Math.abs(dx) < md && Math.abs(dz) < md * .8 && Math.abs(da) < 45) {
@@ -910,6 +957,7 @@ function update(dt) {
   for (const u of units) {
     if (u.hp <= 0 && !u.done) {
       u.done = 1;
+      leaveBunker(u);
       if (!u.noloss) lost[u.side]++;
       if (!u.silent) {
         const air = u.d.layer === 'a';
@@ -976,7 +1024,7 @@ function shoot(u, t, delay, d3, W) {
     if (t.d.layer === 'a' && u.d.layer === 'a' && (d3 || 0) < 110 * K) acc *= .7;
     if (u.sup > .3) acc *= 1 - u.sup * .35;         // 被压着打，手抖
     if (u.prone > .5) acc *= .82;
-    if (t.cover) acc *= .72;                        // 目标躲在掩体后
+    if (t.cover) acc *= t.cover.kind === 'bunker' ? .52 : .72;   // 目标缩在工事里
     if (t.prone > .5) acc *= .78;                   // 趴着的人难打
     miss = Math.random() > clamp(acc, .08, .95);
   }
@@ -1019,7 +1067,7 @@ function applyDamage(p, v) {
     }
     dmg = p.dmg;                                    // 打穿了就是全额
   } else dmg = dmgTo(p, v);
-  if (v.cover && v.d.layer === 'g') dmg *= .78;
+  if (v.cover && v.d.layer === 'g') dmg *= v.cover.kind === 'bunker' ? .42 : .74;
   if (v.prone > .5) dmg *= .82;
   dmg *= RANK_TGH[v.rank];
   v.hp -= dmg;
@@ -1682,14 +1730,37 @@ function drawSmoke(s) {
   }
   ctx.restore();
 }
-function drawCover(c) {
-  if (c.kind !== 'bag') return;                    // 弹坑已经烙在伤痕层上了
-  const q = proj(c.wx, c.wz, 0), sc = scaleAt(q[2]);
-  ctx.save(); seed((c.wx * 7 + c.wz * 331) | 0);
-  ctx.globalAlpha = .5; ctx.strokeStyle = '#8a8271'; ctx.lineWidth = 1.4; ctx.lineCap = 'round';
-  for (let i = 0; i < 3; i++)                      // 三只沙袋
-    rcirc(q[0] + (i - 1) * 7 * sc, q[1] - 3 * sc - (i === 1 ? 3 * sc : 0), 4.2 * sc, 2);
-  rline(q[0] - 12 * sc, q[1], q[0] + 12 * sc, q[1], 1.6);
+function drawWork(w) {
+  ctx.save(); seed(w.sd); ctx.lineCap = 'round';
+  if (w.kind === 'trench') {
+    /* 壕沟：沿纵深挖的 Z 字折线，两侧堆着挖出来的土 */
+    ctx.globalAlpha = .5; ctx.strokeStyle = '#7d7565'; ctx.lineWidth = 1.7;
+    const n = 6, pts = [];
+    for (let i = 0; i <= n; i++) {
+      const wz = clamp(w.wz + (i / n - .5) * w.half * 2 / DEPTH, .02, .98);
+      const q = proj(w.wx + (i % 2 ? 9 * K : -9 * K), wz, 0);
+      pts.push([q[0], q[1]]);
+    }
+    rpoly(pts, false, 2.2);
+    ctx.globalAlpha = .3; ctx.lineWidth = 1.2;
+    for (const p of pts) rline(p[0] - 6, p[1] + 2.5, p[0] + 6, p[1] + 2.5, 1.8);
+  } else {
+    /* 碉堡：混凝土墩子 + 一条射击孔，驻了几个人就在顶上点几个圈 */
+    const q = proj(w.wx, w.wz, 0), sc = scaleAt(q[2]);
+    const bw = 13 * sc, bh = 9 * sc;
+    ctx.globalAlpha = .62; ctx.strokeStyle = '#6e6858'; ctx.lineWidth = 1.9;
+    rpoly([[q[0] - bw, q[1]], [q[0] - bw * .78, q[1] - bh],
+           [q[0] + bw * .78, q[1] - bh], [q[0] + bw, q[1]]], true, 2);
+    ctx.lineWidth = 1.5;
+    rline(q[0] - bw, q[1] - bh, q[0] + bw, q[1] - bh, 1.8);          // 顶盖
+    ctx.lineWidth = 2.6; ctx.globalAlpha = .72;
+    rline(q[0] - bw * .5, q[1] - bh * .5, q[0] + bw * .5, q[1] - bh * .5, 1.3);   // 射击孔
+    if (w.users.length) {
+      ctx.globalAlpha = .55; ctx.lineWidth = 1.2;
+      for (let i = 0; i < w.users.length; i++)
+        rcirc(q[0] + (i - (w.users.length - 1) / 2) * 7 * sc, q[1] - bh - 4 * sc, 1.9 * sc, 1);
+    }
+  }
   ctx.restore();
 }
 function drawWreck(w) {
@@ -1714,7 +1785,7 @@ function render() {
   mainCtx.save();
   if (shake > .01) mainCtx.translate((Math.random() - .5) * shake * 9, (Math.random() - .5) * shake * 6);
   drawPaper();
-  for (const c of covers) drawCover(c);
+  for (const w of works) drawWork(w);
   zbuf.length = 0;
   for (const w of wrecks) zbuf.push([w.wz, 0, w]);
   for (const u of units) zbuf.push([u.wz, 1, u]);
@@ -1893,7 +1964,7 @@ $('lsb').onclick = () => {
   applyRot();
 };
 $('clr').onclick = () => {
-  units = []; projs = []; fx = []; wrecks = []; smokes = []; craters = [];
+  units = []; projs = []; fx = []; wrecks = []; smokes = [];
   lost = [0, 0]; over = false; tick = 0; logs = []; $('log').innerHTML = '';
   scars = null;
   for (const c of CMDS) cmdCd[c.id] = 0;
