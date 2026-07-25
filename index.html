@@ -99,11 +99,12 @@
 <div id="rot">
 
 <header>
-  <h1>草稿纸大战 <span class="s">/ 斜着看的战场</span></h1>
+  <h1>草稿纸大战 <span class="s">/ US vs USSR</span></h1>
   <div class="score">
-    <span class="sb">蓝 <b id="nb">0</b></span>
+    <span class="sb">US <b id="nb">0</b></span>
     <div id="bar"><i class="b" id="pb"></i><i class="r" id="pr"></i></div>
-    <span class="sr"><b id="nr">0</b> 红</span>
+    <span class="sr"><b id="nr">0</b> CCCP</span>
+    <span class="vs" id="tide"></span>
     <span class="vs">战损 <span class="sr" id="lb">0</span>:<span class="sb" id="lr">0</span></span>
   </div>
 </header>
@@ -117,8 +118,8 @@
 
 <div id="hud">
   <div class="grp">
-    <button class="side blue on" data-side="0">蓝军</button>
-    <button class="side red" data-side="1">红军</button>
+    <button class="side blue on" data-side="0">美军</button>
+    <button class="side red" data-side="1">苏军</button>
   </div>
   <div class="grp col" id="tools">
     <div class="row" id="rowG"><span class="lbl">陆</span></div>
@@ -180,7 +181,17 @@ function rcirc(cx, cy, r, amp) {
   for (let i = 0; i <= n; i++) { const a = i / n * 6.2832; pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]); }
   rpoly(pts, true, amp === undefined ? 1.3 : amp);
 }
-/* 红军统一的"涂色"手法：形状里补几道斜排线 */
+/* 五角星：一笔连五个隔点，正好画出星形轮廓。美军空心、苏军补一道涂色 */
+function star(cx, cy, r, solid) {
+  const pts = [];
+  for (let i = 0; i < 5; i++) {
+    const a = -Math.PI / 2 + i * 4 * Math.PI / 5;
+    pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
+  }
+  rpoly(pts, true, .7);
+  if (solid) { const lw = ctx.lineWidth; ctx.lineWidth = lw * .7; rline(cx - r * .5, cy, cx + r * .5, cy, .6); ctx.lineWidth = lw; }
+}
+/* 苏军统一的"涂色"手法：形状里补几道斜排线 */
 function sh(x, y, w, h, n) {
   n = n || 3;
   const lw = ctx.lineWidth; ctx.lineWidth = Math.max(.7, lw * .6);
@@ -264,20 +275,21 @@ const WPN = {
 };
 
 /* ══════════════════════════ 编制表 ══════════════════════════
-   morale 抗压制 · grit 撤退阈值（血量比例）· support 支援类型         */
+   抗压制(morale)、撤退阈值(grit)、突击性(aggr) 都不再逐个手写，
+   由 armor / support / 射程派生 —— 见下面的预处理                     */
 const UNITS = {
-  inf:   { name:'步兵',   sub:'步枪+手雷',  k:'1', layer:'g', hp:34,  spd:26, armor:0, h:24, w:['rifle','grenade'],   morale:1,   grit:.28, aggr:1, weight:30 },
-  mg:    { name:'机枪班', sub:'三连发压制', k:'2', layer:'g', hp:46,  spd:15, armor:0, h:18, w:['hmg'],               morale:1.2, grit:.3,  aggr:1, weight:16 },
-  sniper:{ name:'狙击手', sub:'专杀步兵',   k:'3', layer:'g', hp:26,  spd:18, armor:0, h:12, w:['srifle'],            morale:.8,  grit:.4,  weight:8 },
-  atgm:  { name:'反坦克组',sub:'导弹+自卫枪',k:'4', layer:'g', hp:40,  spd:15, armor:0, h:22, w:['atgmMsl','rifle'],   morale:.9,  grit:.32, weight:11 },
-  tank:  { name:'主战坦克',sub:'主炮+同轴枪',k:'5', layer:'g', hp:195, spd:15, armor:1, h:16, w:['tankGun','coax'],    morale:2.2, grit:.18, aggr:1, weight:18 },
-  ifv:   { name:'步战车', sub:'机炮+反坦克',k:'6', layer:'g', hp:112, spd:31, armor:1, h:14, w:['autocan','atgmMsl'], morale:1.7, grit:.22, aggr:1, weight:14 },
-  aa:    { name:'高射炮', sub:'近程弹幕',   k:'7', layer:'g', hp:95,  spd:12, armor:1, h:16, w:['flakGun'], hold:210, morale:1.4, grit:.25, weight:11 },
-  sam:   { name:'防空导弹',sub:'远程猎机',   k:'8', layer:'g', hp:88,  spd:10, armor:1, h:18, w:['samMsl'],  hold:300, morale:1.3, grit:.3,  weight:8 },
-  arty:  { name:'榴弹炮', sub:'超远溅射',   k:'9', layer:'g', hp:105, spd:8,  armor:1, h:16, w:['howitzer'],          morale:1.5, grit:.3,  weight:9 },
-  mlrs:  { name:'火箭炮', sub:'6发齐射',    k:'0', layer:'g', hp:92,  spd:7,  armor:1, h:18, w:['mlrsSalvo'],         morale:1.4, grit:.32, weight:7 },
-  supply:{ name:'补给车', sub:'解压制·快装填',k:'u',layer:'g', hp:80, spd:20, armor:1, h:16, w:[], hold:250, support:'supply', morale:1.1, grit:.5, weight:8 },
-  medic: { name:'医疗兵', sub:'救治伤员',   k:'i', layer:'g', hp:36,  spd:24, armor:0, h:22, w:[], hold:190, support:'medic',  morale:.9, grit:.5, weight:8 },
+  inf:   { name:'步兵',   sub:'步枪+手雷',  k:'1', layer:'g', hp:34,  spd:26, armor:0, h:24, w:['rifle','grenade'],   aggr:1, weight:30 },
+  mg:    { name:'机枪班', sub:'三连发压制', k:'2', layer:'g', hp:46,  spd:15, armor:0, h:18, w:['hmg'],               aggr:1, weight:16 },
+  sniper:{ name:'狙击手', sub:'专杀步兵',   k:'3', layer:'g', hp:26,  spd:18, armor:0, h:12, w:['srifle'],            weight:8 },
+  atgm:  { name:'反坦克组',sub:'导弹+自卫枪',k:'4', layer:'g', hp:40,  spd:15, armor:0, h:22, w:['atgmMsl','rifle'],   weight:11 },
+  tank:  { name:'主战坦克',sub:'主炮+同轴枪',k:'5', layer:'g', hp:195, spd:15, armor:1, h:16, w:['tankGun','coax'],    aggr:1, weight:18 },
+  ifv:   { name:'步战车', sub:'机炮+反坦克',k:'6', layer:'g', hp:112, spd:31, armor:1, h:14, w:['autocan','atgmMsl'], aggr:1, weight:14 },
+  aa:    { name:'高射炮', sub:'近程弹幕',   k:'7', layer:'g', hp:95,  spd:12, armor:1, h:16, w:['flakGun'], hold:210, weight:11 },
+  sam:   { name:'防空导弹',sub:'远程猎机',   k:'8', layer:'g', hp:88,  spd:10, armor:1, h:18, w:['samMsl'],  hold:300, weight:8 },
+  arty:  { name:'榴弹炮', sub:'超远溅射',   k:'9', layer:'g', hp:105, spd:8,  armor:1, h:16, w:['howitzer'],          weight:9 },
+  mlrs:  { name:'火箭炮', sub:'6发齐射',    k:'0', layer:'g', hp:92,  spd:7,  armor:1, h:18, w:['mlrsSalvo'],         weight:7 },
+  supply:{ name:'补给车', sub:'解压制·快装填',k:'u',layer:'g', hp:80, spd:20, armor:1, h:16, w:[], hold:250, support:'supply', weight:8 },
+  medic: { name:'医疗兵', sub:'救治伤员',   k:'i', layer:'g', hp:36,  spd:24, armor:0, h:22, w:[], hold:190, support:'medic',  weight:8 },
 
   fig:   { name:'战斗机', sub:'空空弹+航炮',k:'q', layer:'a', hp:72,  spd:68, armor:1, h:12, w:['aam','gunpod'],       alt:250, fuel:55, weight:13 },
   atk:   { name:'攻击机', sub:'舔地加特林', k:'w', layer:'a', hp:125, spd:46, armor:1, h:14, w:['gatling','agRocket'], alt:95,  fuel:50, weight:11 },
@@ -315,16 +327,20 @@ for (const k in UNITS) {
              (d.ws.some(w => w.hits.indexOf('a') >= 0) ? 'a' : '');
   d.dps = d.ws.reduce((s, w) => s + w.dmg * (w.burst || 1) / w.rof, 0);
   d.hasAmmo = d.ws.some(w => w.ammo !== undefined);
-  if (d.morale === undefined) d.morale = 1.5;
-  if (d.grit === undefined) d.grit = 0;      // 空中单位不撤退，走返航逻辑
-  /* 固定翼不能停在空中：只有旋翼可以悬停 */
-  if (d.layer === 'a' && !d.wing) d.wing = 'fixed';
+  /* 派生性格，不再逐个手写：
+     · 抗压制：铁皮里的人比露天的沉得住气
+     · 撤退阈值：支援车最先溜，装甲最后退，飞机不撤（走返航）
+     · 突击性：射程短的自然得贴上去打，远程的留在后面 */
+  d.morale = d.armor ? 1.6 : 1;
+  d.grit = d.layer === 'a' ? 0 : (d.support ? .5 : (d.armor ? .2 : .3));
+  d.aggr = !!d.aggr;                      // 显式标记：主武器是近战的才顶上去
+  if (d.layer === 'a' && !d.wing) d.wing = 'fixed';   // 只有旋翼能悬停
 }
 const GROUND = ['inf','mg','sniper','atgm','tank','ifv','aa','sam','arty','mlrs','supply','medic'];
 const AIR = ['fig','atk','heli','bmb','drone','cruise'];
 const ALL = GROUND.concat(AIR);
-const SIDE_COL = ['#2f4f9e', '#b7332f'];
-const SIDE_NAME = ['蓝军', '红军'];
+const SIDE_COL = ['#2f4f9e', '#b7332f'];      // NATO 蓝 / 苏联红
+const SIDE_NAME = ['美军', '苏军'];
 const RANK_NAME = ['', '老兵', '精锐'];
 const SLOW = .5;
 
@@ -336,7 +352,7 @@ let uid = 1, lost = [0, 0];
 let running = true, speed = 1, autoRe = true, sound = false, showGrid = true;
 let curSide = 0, curTool = 'inf';
 let over = false, reTimer = 0, tick = 0, shake = 0;
-let logs = [];
+let logs = [], lastFavored = -1;
 
 /* ══════════════════════════ 纸 & 伤痕层 ══════════════════════════ */
 let paper = null, scars = null;
@@ -440,7 +456,7 @@ function spawn(side, key, wx, wz) {
     st: rnd(.72, 1.04), flash: 0, done: 0, silent: 0, noloss: 0,
     sup: 0, prone: 0, vet: 0, rank: 0, kills: 0,
     mode: 0, aimEl: 0, boost: 0, cover: null, link: null, smokeT: 0,
-    turnT: 0, orb: Math.random() * 6.3,
+    turnT: 0, orb: Math.random() * 6.3, leg: 0, egress: 0,
   };
   units.push(u);
   return u;
@@ -618,8 +634,8 @@ function update(dt) {
   if (autoRe) {
     reTimer -= dt;
     if (reTimer <= 0) {
-      /* 维持编制：原来补得比死得慢，战场稀成一条线，压制/掩体/支援
-         这些"火力密度"机制全都体现不出来。改成朝目标兵力补齐。 */
+      /* 波动平衡：不把双方死死锁在 50:50，让优势像潮水一样在两边来回 ——
+         一方攻势推进一阵，再被扳回来。只有落后到快崩盘时才强力兜底。 */
       reTimer = 1.15;
       const TARGET = 17;          // 太多就看不清谁在打谁；密度靠压制强度补回来
       let nb = 0, nr = 0;
@@ -628,11 +644,22 @@ function update(dt) {
       const pw = [power(0), power(1)];
       const weak = pw[0] <= pw[1] ? 0 : 1;
       const ratio = Math.max(1, Math.min(pw[0], pw[1])) / Math.max(1, Math.max(pw[0], pw[1]));
-      for (let s = 0; s < 2; s++) {
-        if (cap[s] < TARGET) reinforce(s);
-        if (cap[s] < TARGET * .6) reinforce(s);            // 打残了加倍补
+
+      const tide = Math.sin(tick * .055);                  // 一个来回约 110 游戏秒
+      const favored = tide > 0 ? 0 : 1;
+      const sway = Math.abs(tide);
+      if (favored !== lastFavored && sway > .35) {
+        lastFavored = favored;
+        pushLog(SIDE_NAME[favored] + ' 转入攻势');
       }
-      if (ratio < .6 && cap[weak] < TARGET + 10) reinforce(weak);   // 战力落后再追一个
+      for (let s = 0; s < 2; s++) {
+        if (cap[s] >= TARGET) continue;
+        /* 下风的一方补得慢些，于是战线会被推着走 */
+        if (s === favored || Math.random() > sway * .6) reinforce(s);
+      }
+      if (ratio < .45 && cap[weak] < TARGET + 8) {         // 快打崩了才强力兜底
+        reinforce(weak); reinforce(weak);
+      }
     }
   }
 
@@ -731,12 +758,25 @@ function update(dt) {
             const cs = sp * (dist < u.d.rngMin ? .62 : 1);    // 绞在一起就减速盘旋
             u.wx += Math.sign(bx - u.wx) * cs * dt;
             u.wz += Math.sign(dz) * Math.min(Math.abs(dz), cs * dt * .7 / DEPTH);
-          } else if (dist > u.d.rngMin * .85) {
-            u.wx += Math.sign(t.wx - u.wx) * sp * dt;         // 恒速切入，不做归一化收敛
-            u.wz += Math.sign(dz) * Math.min(Math.abs(dz), sp * dt * .5 / DEPTH);
           } else {
-            u.wx += Math.sin(tick * .55 + u.sd) * sp * dt * .5;   // 在射程上来回游弋
-            u.wz += Math.sign(dz) * Math.min(Math.abs(dz), sp * dt * .2 / DEPTH);
+            /* ── 对地：来回攻击航线 ──
+               阶段由"本段剩余航程"推进，不看与目标的相对位置：目标自己
+               也在跑，靠相对位置判断"是否飞过头"在相向交错时永远判不出来，
+               飞机就卡在原地了（前几版栽的就是这个坑） */
+            if (u.leg <= 0) {
+              if (u.egress) {                                 // 拉开完了 → 掉头再进入
+                u.egress = 0;
+                u.face = t.wx > u.wx ? 1 : -1;
+                u.leg = Math.abs(t.wx - u.wx) + 90 * K;       // 冲到目标并穿过去
+              } else {                                        // 打完这一趟 → 脱离
+                u.egress = 1;
+                u.leg = 250 * K;
+              }
+            }
+            u.leg -= sp * dt;
+            u.wx += u.face * sp * dt;                         // 恒速，从不停
+            if (!u.egress) u.wz += Math.sign(dz) * Math.min(Math.abs(dz), sp * dt * .5 / DEPTH);
+            if (u.wx < 70 || u.wx > WORLD_W - 70) u.leg = 0;  // 撞到图边就结束本段
           }
         } else u.wx += fwd * sp * dt;                         // 没目标也得往前飞
         u.alt += (wantAlt - u.alt) * Math.min(1, dt * 1.4) + Math.sin(u.ph * 1.6 + u.sd) * 14 * dt;
@@ -779,7 +819,9 @@ function update(dt) {
 
     /* 掉头（固定翼脱离途中保持航向，不许原地扭头） */
     let wantFace = u.face;
+    const onRun = u.d.wing === 'fixed' && t && t.d.layer === 'g' && !u.rtb;
     if (u.rtb || u.mode === 1) wantFace = u.side === 0 ? -1 : 1;
+    else if (onRun) wantFace = u.face;          // 对地航线自己管朝向，别在这儿扭头
     else if (t && Math.abs(t.wx - u.wx) > 25) wantFace = t.wx > u.wx ? 1 : -1;
     else if (!t) wantFace = fwd;
     if (wantFace !== u.face) u.turnT = .4;                    // 翻面 → 短暂横滚
@@ -831,7 +873,7 @@ function update(dt) {
                    (u.boost ? .7 : 1) * (u.resupplied ? .85 : 1) * (u.prone > .5 ? 1.35 : 1);
     u.resupplied = 0;
     for (const w of u.ws) if (w.cd > 0) w.cd -= dt;
-    if (t && !u.d.suicide && !u.rtb && u.mode === 0) {
+    if (t && !u.d.suicide && !u.rtb && u.mode === 0 && !u.egress) {   // 脱离途中背对目标，不开火
       const wp = pickWeapon(u, t, dist3(u, t));
       if (wp) {
         wp.cd = wp.d.rof * rnd(.85, 1.15) * rofMul;
@@ -1146,21 +1188,25 @@ const DRAW = {
       if (u.flash > .5) rline(-8, -15 + b, -17, -14 + b, 4);
     }
   },
+  /* 坦克：M1 低长车体＋前倾楔形炮塔＋侧裙板 ／ T-72 短车体＋半球铸造炮塔＋外露负重轮 */
   tank(u, r) {
     const y = -6, el = u.aimEl;
-    rpoly([[-12, y], [-14, y - 7], [9, y - 7], [13, y]], true);
+    let e;
     if (r) {
-      rpoly([[-6, y - 7], [-2, y - 14], [5, y - 14], [8, y - 7]], true);
-      rpoly([[-13, y], [13, y], [13, y + 4], [-13, y + 4]], true);
-      sh(-12, y, 24, 4, 6);
+      rpoly([[-11, y], [-12, y - 6], [8, y - 6], [11, y]], true);
+      rpoly([[-5, y - 6], [-4, y - 10.5], [0, y - 12], [4, y - 10.5], [6, y - 6]], true);  // 半球炮塔
+      rcirc(-8, y + 1, 3.2); rcirc(-2, y + 1, 3.2); rcirc(4, y + 1, 3.2); rcirc(9, y + 1, 2.6);
+      rline(-12, y + 4, 11, y + 4);
+      ctx.lineWidth *= 1.5; e = barrel(3, y - 9.5, 17, el, u.face); ctx.lineWidth /= 1.5;
+      rcirc(e[0] - Math.cos(el) * 5, e[1] + Math.sin(el) * 5, 1.7);      // 炮膛抽烟装置
+      sh(-9, y - 5, 15, 5, 4);
     } else {
-      rpoly([[-5, y - 7], [-4, y - 13], [4, y - 13], [7, y - 7]], true);
-      rcirc(-9, y + 1, 3.4); rcirc(-2, y + 1, 3.4); rcirc(5, y + 1, 3.4); rcirc(11, y + 1, 2.6);
-      rline(-13, y + 4, 13, y + 4);
+      rpoly([[-13, y], [-15, y - 6], [10, y - 6], [14, y]], true);
+      rpoly([[-6, y - 6], [-4, y - 13], [6, y - 12], [9, y - 6]], true);  // 楔形炮塔
+      rpoly([[-14, y], [14, y], [14, y + 4], [-14, y + 4]], true);        // 侧裙板
+      ctx.lineWidth *= 1.5; e = barrel(6, y - 10.5, 19, el, u.face); ctx.lineWidth /= 1.5;
+      rline(-2, y - 13, 2, y - 15);                                       // 车长机枪座
     }
-    ctx.lineWidth *= 1.5;
-    const e = barrel(4, y - 11.5, 17, el, u.face);
-    ctx.lineWidth /= 1.5;
     if (u.dmgTrack) { ctx.strokeStyle = '#6b6455'; rline(-13, y + 5, -4, y + 7, 2.6); rline(6, y + 6, 13, y + 4, 2.4); }
     if (u.flash > .4) {
       rline(e[0], e[1], e[0] + Math.cos(el) * 9, e[1] - Math.sin(el) * 9, 4.5);
@@ -1331,18 +1377,27 @@ const DRAW = {
   },
   bmb(u, r) {
     if (r) {
+      /* Tu-95：后掠翼 + 四台涡桨，螺旋桨盘转着 */
       rpoly([[-20, 0], [-8, -6], [12, -4], [21, 0], [16, 5], [-15, 6]], true);
       rpoly([[-3, -3], [-16, -14], [-6, -14], [4, -3]], true);
       rpoly([[-3, 4], [-16, 15], [-6, 15], [4, 4]], true);
       rpoly([[-20, -1], [-26, -11], [-17, -11]], true);
-      rcirc(-6, -8, 3.4); rcirc(-6, 9, 3.4);
+      const pr = 3 + Math.abs(rotor(u)) * 2.2;
+      [[-7, -8], [-2, -11.5], [-7, 9], [-2, 12.5]].forEach(p => {
+        rcirc(p[0], p[1], 2.2);
+        rline(p[0] + 2, p[1] - pr, p[0] + 2, p[1] + pr, 1.2);          // 桨盘
+      });
       sh(-14, -3, 10, 7, 4);
     } else {
+      /* B-52：细长机身 + 大后掠翼 + 四对吊舱共八发 */
       rpoly([[-20, 0], [-11, -7], [11, -7], [20, -1], [16, 5], [-15, 6]], true);
-      rpoly([[-5, -4], [-14, -15], [-4, -15], [3, -4]], true);
-      rpoly([[-5, 3], [-14, 14], [-4, 14], [3, 3]], true);
+      rpoly([[-5, -4], [-16, -16], [-6, -16], [3, -4]], true);
+      rpoly([[-5, 3], [-16, 15], [-6, 15], [3, 3]], true);
       rpoly([[-20, -1], [-25, -10], [-17, -10]], true);
-      rcirc(-8, -10, 3); rcirc(-8, 9, 3); rcirc(-2, -12, 2.4); rcirc(-2, 11, 2.4);
+      [[-9, -10], [-5, -13], [-9, 9], [-5, 12]].forEach(p => {
+        rpoly([[p[0] - 2.4, p[1] - 1.6], [p[0] + 2.4, p[1] - 1.6],
+               [p[0] + 2.4, p[1] + 1.6], [p[0] - 2.4, p[1] + 1.6]], true);   // 双发吊舱
+      });
       rline(12, -4, 18, -4);
     }
     rline(-6, 6, 6, 6);
@@ -1401,7 +1456,13 @@ function drawUnit(u, alpha, dead) {
   ctx.lineCap = 'round';
   seed(u.sd + ((tick * 5) | 0));
   u.dmgTrack = !dead && u.d.armor && u.hp / u.max < .45;
-  (DRAW[u.d.key] || DRAW.inf)(u, u.side === 1);
+  const isRed = u.side === 1;
+  (DRAW[u.d.key] || DRAW.inf)(u, isRed);
+  /* 国籍星标：车体/机身上一颗五角星（太小就省了，免得糊成一团） */
+  if (u.d.armor && sc > .95) {
+    ctx.lineWidth = 1.1 / sc;
+    star(u.d.layer === 'a' ? -4 : -7, u.d.layer === 'a' ? -1 : -8, 2.6, isRed);
+  }
   if (!dead && u.flash > .45 && (u.fk === 'rocket' || u.fk === 'bomb')) {
     ctx.strokeStyle = '#9c9484'; ctx.lineWidth = 1.2 / sc;
     const y0 = u.d.layer === 'g' ? -u.d.h * .45 : 1;
@@ -1710,6 +1771,12 @@ function loop(now) {
   const pw = [power(0), power(1)], tot = pw[0] + pw[1] || 1;
   $('pb').style.width = (pw[0] / tot * 100) + '%';
   $('pr').style.width = (pw[1] / tot * 100) + '%';
+  /* 战局潮汐：谁在攻势 */
+  const tide = Math.sin(tick * .055), el = $('tide');
+  if (autoRe && Math.abs(tide) > .3) {
+    el.textContent = tide > 0 ? 'US 攻势 ▶' : '◀ CCCP 攻势';
+    el.style.color = tide > 0 ? SIDE_COL[0] : SIDE_COL[1];
+  } else el.textContent = '';
   for (const c of CMDS) {                          // 冷却遮罩
     const b = cmdBtn[c.id], k = cmdCd[c.id] / c.cd;
     b.querySelector('.cool').style.height = (k * 100) + '%';
