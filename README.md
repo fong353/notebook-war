@@ -85,6 +85,24 @@ close-in fighting falls back to guns.
 per crater and redrawing all of them each frame. Old craters have been erased more often, so they
 disappear first.
 
+## Acknowledgements
+
+Built in conversation with **Claude Opus 5**. I described the drawing I used to make as a kid and it
+wrote the first version in a single file; after that we went a round at a time — I'd point at
+whatever felt wrong ("the jets should fly back and forth", "dogfights end too fast", "the health
+bars overlap the tanks") and it would implement the change, then show me the measurements on
+whether it actually worked.
+
+What I didn't expect was how often the real cause sat somewhere other than where I was pointing.
+Suppression felt weak not because the numbers were low, but because attrition had thinned the field
+to 14 units and fire was never dense enough to pin anyone. Dogfights ended fast not because guns
+hit too hard, but because missiles had no minimum range, so 58 damage kept landing at knife
+distance. The aircraft weren't refusing to fly attack runs out of stubbornness — steering by a
+three-dimensional distance makes a plane decelerate to a hover directly above its target. It found
+all three by instrumenting the simulation and reading the output rather than guessing, and said so
+plainly when a change I'd asked for had broken a different mechanic. The commit history is the
+honest log of all of it.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
