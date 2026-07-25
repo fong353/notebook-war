@@ -213,6 +213,7 @@ const UI = {
   lgAmmo:   [' RTB — out of ammo', ' 弹尽返航'],
   lgInit:   [' seizes the initiative', ' 转入攻势'],
   lgStrike: [' calls in an air strike', ' 呼叫空袭'],
+  lgNoSpect:[' — nothing outsized qualifies right now', ' —— 眼下没有够条件的大家伙'],
   lgBarrage:[' requests a barrage', ' 请求炮火覆盖'],
   lgReinf:  [' reinforcements arrive', ' 紧急增援抵达'],
   lgRally:  [' rallies ', ' 全线鼓舞 '],  lgUnits: [' units', ' 部队'],
@@ -334,6 +335,35 @@ function zoomAt(mx, my, mul) {
   clampView();
 }
 function resetView() { view.k = 1; view.x = view.y = 0; clampView(); }
+
+/* 触屏没有滚轮也没有中键：两指捏合缩放、两指平移。第二根手指一落下就
+   停笔，免得缩放的时候顺手画出一串部队 */
+const ptrs = new Map();
+let pinch = null;
+const ptrMid = () => {
+  let x = 0, y = 0; for (const p of ptrs.values()) { x += p.x; y += p.y; }
+  return [x / ptrs.size, y / ptrs.size];
+};
+const ptrSpan = () => {
+  const a = [...ptrs.values()];
+  return a.length < 2 ? 0 : Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y);
+};
+function pinchStart() {
+  const r = cv.getBoundingClientRect(), m = ptrMid();
+  pinch = { span: ptrSpan(), mx: m[0] - r.left, my: m[1] - r.top, k: view.k, vx: view.x, vy: view.y };
+}
+function pinchMove() {
+  if (!pinch || ptrs.size < 2 || pinch.span < 8) return;
+  const r = cv.getBoundingClientRect(), m = ptrMid();
+  const mx = m[0] - r.left, my = m[1] - r.top;
+  /* 先按捏合比例围绕起始中心缩放，再补上两指中心自己的位移 */
+  const k = clamp(pinch.k * (ptrSpan() / pinch.span), 1, VIEW_MAX);
+  view.k = k;
+  view.x = pinch.mx - (pinch.mx - pinch.vx) * (k / pinch.k) + (mx - pinch.mx);
+  view.y = pinch.my - (pinch.my - pinch.vy) * (k / pinch.k) + (my - pinch.my);
+  clampView();
+}
+
 function applyRot() {
   const r = document.getElementById('rot'), on = document.body.classList.contains('ls');
   if (on) {
@@ -1328,6 +1358,7 @@ const CMDS = [
   { id:'smoke',   name:['Gas','毒气'],       tip:['A drifting gas cloud: keeps hurting and pinning anyone caught in it','飘散的毒气云：持续伤害并压制云里的一切'], cd:22, aim:1 },
   { id:'mine',    name:['Mine','坑道爆破'], tip:['Sappers have been digging for weeks. Fires after a delay, and leaves a hole in the map','工兵挖了几周的坑道，延迟起爆，地图上会留个大坑'], cd:70, aim:1 },
   { id:'airdrop', name:['Raid','突击队'],    tip:['A raiding party goes over the top into the target trench','一队突击兵越出战壕，摸进指定阵地'], cd:34, aim:1 },
+  { id:'spect',   name:['Set-piece','奇观'],  tip:['Call in whatever outsized thing qualifies right now — each one has its own precondition, so sometimes nothing comes','把眼下够条件的那个大家伙叫出来。每样奇观都有自己的前置条件，所以有时候什么也叫不动'], cd:85, aim:0 },
 ];
 const cmdCd = {};
 CMDS.forEach(c => cmdCd[c.id] = 0);
@@ -1397,6 +1428,9 @@ function execCmd(id, wx, wz) {
                     r0: rnd(56, 82) * K, r: 30, t: 0, life: 16, gas: 1, side,
                     sd: (Math.random() * 1e6) | 0 });
     pushLog(sideName(side) + T('lgSmoke'));
+  } else if (id === 'spect') {
+    /* 奇观各有前置条件，凑不齐就是叫不动 —— 冷却照走，跟别的指令一个规矩 */
+    if (!runSpectacle(side)) pushLog(sideName(side) + T('lgNoSpect'));
   }
   cmdCd[id] = CMDS.find(c => c.id === id).cd;
 }
@@ -1428,7 +1462,7 @@ function skyFall(side, wx, wz, dmg, splash, dur, alt) {
 /* 简易延迟：把回调挂进特效队列，跟着模拟时钟走（不用真实计时器） */
 const shells = [];
 function setTimeoutShell(delay, fn) { shells.push({ t: delay, fn }); }
-function runSpectacle() {
+function runSpectacle(forceSide) {
   /* nat < 0 = 不属于任何一方，随便挑一边发动；when 用来卡前置条件 */
   const ok = e => (e.nat < 0 || e.nat === match[0] || e.nat === match[1]);
   /* 不属于任何一方的奇观两边都可能发动，所以前置条件得逐边验 —— 否则会
@@ -1436,14 +1470,16 @@ function runSpectacle() {
   const pool = [];
   for (const e of SPECTACLE) {
     if (!ok(e)) continue;
-    const sides = e.nat < 0 ? [0, 1] : [e.nat === match[0] ? 0 : 1];
+    let sides = e.nat < 0 ? [0, 1] : [e.nat === match[0] ? 0 : 1];
+    if (forceSide !== undefined) sides = sides.filter(sd => sd === forceSide);
     for (const sd of sides) if (!e.when || e.when(sd))
       for (let i = e.w || 1; i > 0; i--) pool.push([e, sd]);   // w = 抽中权重
   }
-  if (!pool.length) return;
+  if (!pool.length) return false;
   const [e, side] = pick(pool);
   e.go(side);
   pushLog('⚑ ' + (e.nat < 0 ? '' : sideName(side) + ' — ') + L(e.name));
+  return true;
 }
 
 const SPECTACLE = [
@@ -2577,6 +2613,11 @@ function put(x, y) {
   hideBanner();
 }
 cv.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'touch') {
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (ptrs.size === 2) { drawing = 0; pinchStart(); return; }
+    if (ptrs.size > 2) return;
+  }
   if (e.button === 1) {                              // 中键：拖动画面
     e.preventDefault();
     pan = { sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y };
@@ -2595,12 +2636,16 @@ cv.addEventListener('pointerdown', e => {
   put(q[0], q[1]);
 });
 cv.addEventListener('pointermove', e => {
+  if (ptrs.has(e.pointerId)) {
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (ptrs.size >= 2) { pinchMove(); return; }
+  }
   if (pan) { view.x = pan.vx + (e.clientX - pan.sx); view.y = pan.vy + (e.clientY - pan.sy); clampView(); return; }
   const q = pos(e);
   hover.on = 1; hover.x = q[0]; hover.y = q[1];
   if (drawing) put(q[0], q[1]);
 });
-cv.addEventListener('pointerup', () => { pan = null; document.body.classList.remove('panning'); drawing = 0; });
+cv.addEventListener('pointerup', e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; pan = null; document.body.classList.remove('panning'); drawing = 0; });
 /* 滚轮缩放。passive:false 才能拦下页面滚动 */
 cv.addEventListener('wheel', e => {
   e.preventDefault();
@@ -2612,8 +2657,8 @@ cv.addEventListener('mousedown', e => { if (e.button === 1) e.preventDefault(); 
 cv.addEventListener('auxclick', e => { if (e.button === 1) e.preventDefault(); });
 if ($('zfit')) $('zfit').onclick = resetView;
 
-cv.addEventListener('pointercancel', () => { pan = null; document.body.classList.remove('panning'); drawing = 0; });
-cv.addEventListener('pointerleave', () => { drawing = 0; hover.on = 0; });
+cv.addEventListener('pointercancel', e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; pan = null; document.body.classList.remove('panning'); drawing = 0; });
+cv.addEventListener('pointerleave', e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; drawing = 0; hover.on = 0; });
 
 /* 兵种按钮 */
 function buildTools() {

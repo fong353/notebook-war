@@ -329,6 +329,35 @@ function zoomAt(mx, my, mul) {
   clampView();
 }
 function resetView() { view.k = 1; view.x = view.y = 0; clampView(); }
+
+/* 触屏没有滚轮也没有中键：两指捏合缩放、两指平移。第二根手指一落下就
+   停笔，免得缩放的时候顺手画出一串部队 */
+const ptrs = new Map();
+let pinch = null;
+const ptrMid = () => {
+  let x = 0, y = 0; for (const p of ptrs.values()) { x += p.x; y += p.y; }
+  return [x / ptrs.size, y / ptrs.size];
+};
+const ptrSpan = () => {
+  const a = [...ptrs.values()];
+  return a.length < 2 ? 0 : Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y);
+};
+function pinchStart() {
+  const r = cv.getBoundingClientRect(), m = ptrMid();
+  pinch = { span: ptrSpan(), mx: m[0] - r.left, my: m[1] - r.top, k: view.k, vx: view.x, vy: view.y };
+}
+function pinchMove() {
+  if (!pinch || ptrs.size < 2 || pinch.span < 8) return;
+  const r = cv.getBoundingClientRect(), m = ptrMid();
+  const mx = m[0] - r.left, my = m[1] - r.top;
+  /* 先按捏合比例围绕起始中心缩放，再补上两指中心自己的位移 */
+  const k = clamp(pinch.k * (ptrSpan() / pinch.span), 1, VIEW_MAX);
+  view.k = k;
+  view.x = pinch.mx - (pinch.mx - pinch.vx) * (k / pinch.k) + (mx - pinch.mx);
+  view.y = pinch.my - (pinch.my - pinch.vy) * (k / pinch.k) + (my - pinch.my);
+  clampView();
+}
+
 function applyRot() {
   const r = document.getElementById('rot'), on = document.body.classList.contains('ls');
   if (on) {
@@ -2170,6 +2199,11 @@ function put(x, y) {
   hideBanner();
 }
 cv.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'touch') {
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (ptrs.size === 2) { drawing = 0; pinchStart(); return; }
+    if (ptrs.size > 2) return;
+  }
   if (e.button === 1) {                              // 中键：拖动画面
     e.preventDefault();
     pan = { sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y };
@@ -2188,12 +2222,16 @@ cv.addEventListener('pointerdown', e => {
   put(q[0], q[1]);
 });
 cv.addEventListener('pointermove', e => {
+  if (ptrs.has(e.pointerId)) {
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (ptrs.size >= 2) { pinchMove(); return; }
+  }
   if (pan) { view.x = pan.vx + (e.clientX - pan.sx); view.y = pan.vy + (e.clientY - pan.sy); clampView(); return; }
   const q = pos(e);
   hover.on = 1; hover.x = q[0]; hover.y = q[1];
   if (drawing) put(q[0], q[1]);
 });
-cv.addEventListener('pointerup', () => { pan = null; document.body.classList.remove('panning'); drawing = 0; });
+cv.addEventListener('pointerup', e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; pan = null; document.body.classList.remove('panning'); drawing = 0; });
 /* 滚轮缩放。passive:false 才能拦下页面滚动 */
 cv.addEventListener('wheel', e => {
   e.preventDefault();
@@ -2205,8 +2243,8 @@ cv.addEventListener('mousedown', e => { if (e.button === 1) e.preventDefault(); 
 cv.addEventListener('auxclick', e => { if (e.button === 1) e.preventDefault(); });
 if ($('zfit')) $('zfit').onclick = resetView;
 
-cv.addEventListener('pointercancel', () => { pan = null; document.body.classList.remove('panning'); drawing = 0; });
-cv.addEventListener('pointerleave', () => { drawing = 0; hover.on = 0; });
+cv.addEventListener('pointercancel', e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; pan = null; document.body.classList.remove('panning'); drawing = 0; });
+cv.addEventListener('pointerleave', e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; drawing = 0; hover.on = 0; });
 
 /* 兵种按钮 */
 function buildTools() {

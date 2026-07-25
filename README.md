@@ -58,8 +58,10 @@ A single HTML file. No build step, no dependencies, no network calls — open it
   enough for the flak to get a shot at, a B-17 formation, a Katyusha battalion. 1918 gets its own —
   Zeppelin raids, the Paris Gun, railway-gun barrages, over-the-top waves, a cavalry charge.
   Each belongs to one nation, so you only see it when that nation is in the match.
-- **Six commander orders** on cooldowns — air strike, barrage, reinforce, rally, smoke, airdrop —
-  so you can lean on the battle without micromanaging it.
+- **Commander orders** on cooldowns — air strike, barrage, reinforce, rally, smoke, airdrop, plus a
+  mine in 1918 — so you can lean on the battle without micromanaging it. One of them calls in a
+  set-piece: it summons whatever outsized thing currently qualifies, and since each has its own
+  precondition, sometimes nothing comes.
 
 ![Nations](docs/nations.png)
 
