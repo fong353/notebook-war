@@ -230,42 +230,82 @@ function applyRot() {
 window.addEventListener('resize', applyRot);
 window.addEventListener('orientationchange', () => setTimeout(applyRot, 120));
 
-/* ══════════════════════ 编制表 ══════════════════════
-   rng/spd/splash/hold 写"屏幕手感值"，启动时换算成世界单位
-   armor 装甲 · vs[对装甲,对软] 伤害倍率 · alt 巡航高度
-   fuel 滞空秒数 · ammo 可开火轮数（打完/耗尽即返航）                   */
-const UNITS = {
-  inf:   { name:'步兵',   sub:'量大便宜',  key:'inf',   k:'1', layer:'g', hp:34,  dmg:5,   rng:105, rof:.50, spd:26, hits:'ga', armor:0, vs:[.45,1],  proj:'bullet', h:24, weight:30 },
-  mg:    { name:'机枪班', sub:'三连发压制',key:'mg',    k:'2', layer:'g', hp:46,  dmg:4,   rng:135, rof:.55, spd:15, hits:'ga', armor:0, vs:[.3,1.25],proj:'bullet', h:18, burst:3, weight:16 },
-  sniper:{ name:'狙击手', sub:'专杀步兵',  key:'sniper',k:'3', layer:'g', hp:26,  dmg:30,  rng:265, rof:2.2, spd:18, hits:'g',  armor:0, vs:[.12,3],  proj:'bullet', h:12, weight:8 },
-  atgm:  { name:'反坦克组',sub:'导弹破甲',  key:'atgm',  k:'4', layer:'g', hp:40,  dmg:56,  rng:245, rof:2.6, spd:15, hits:'g',  armor:0, vs:[2.2,.5], proj:'rocket', h:22, weight:11 },
-  tank:  { name:'主战坦克',sub:'皮厚火猛',  key:'tank',  k:'5', layer:'g', hp:195, dmg:25,  rng:185, rof:1.3, spd:15, hits:'g',  armor:1, vs:[1.2,1],  proj:'shell',  h:16, weight:18 },
-  ifv:   { name:'步战车', sub:'快·机炮',   key:'ifv',   k:'6', layer:'g', hp:112, dmg:8,   rng:155, rof:.28, spd:31, hits:'ga', armor:1, vs:[.55,1.3],proj:'bullet', h:14, weight:14 },
-  aa:    { name:'高射炮', sub:'近程防空',  key:'aa',    k:'7', layer:'g', hp:95,  dmg:20,  rng:215, rof:.45, spd:12, hits:'a',  armor:1, vs:[1,1],    proj:'flak',   h:16, hold:210, weight:11 },
-  sam:   { name:'防空导弹',sub:'远程猎机',  key:'sam',   k:'8', layer:'g', hp:88,  dmg:72,  rng:430, rof:3.2, spd:10, hits:'a',  armor:1, vs:[1,1],    proj:'rocket', h:18, hold:300, weight:8 },
-  arty:  { name:'榴弹炮', sub:'超远溅射',  key:'arty',  k:'9', layer:'g', hp:105, dmg:40,  rng:400, rof:3.0, spd:8,  hits:'g',  armor:1, vs:[1,1.2],  proj:'bomb',   h:16, splash:56, weight:9 },
-  mlrs:  { name:'火箭炮', sub:'6发齐射',   key:'mlrs',  k:'0', layer:'g', hp:92,  dmg:24,  rng:490, rof:6.0, spd:7,  hits:'g',  armor:1, vs:[.8,1.4], proj:'rocket', h:18, splash:44, burst:6, weight:7 },
+/* ══════════════════════ 武器表 ══════════════════════
+   武器是独立的东西，一个单位可以挂好几门，各有自己的射程/装填/弹药。
+   开火时 AI 按"对当前这个目标的单位时间有效伤害"挑一门 —— 于是战斗机
+   远距离放空空导弹、贴近了改航炮；坦克碰步兵用同轴机枪、碰装甲才动主炮。
+   hits 打得着的层 · vs[对装甲,对软] 伤害倍率 · acc 基础精度
+   溅射武器不判命中（靠落点散布产生偏差，炸偏了周围照样吃伤害）
+   ammo 只给空中武器 —— 地面武器不限弹，免得战场堆一群没子弹的僵尸    */
+const WPN = {
+  rifle:    { name:'步枪',      proj:'bullet', dmg:5,  rng:105, rof:.50, hits:'ga', vs:[.45,1],   acc:.68 },
+  grenade:  { name:'手雷',      proj:'bomb',   dmg:16, rng:58,  rof:4.5, hits:'g',  vs:[.6,1.4],  splash:26 },
+  hmg:      { name:'重机枪',    proj:'bullet', dmg:4,  rng:135, rof:.55, hits:'ga', vs:[.3,1.25], acc:.52, burst:3 },
+  srifle:   { name:'狙击枪',    proj:'bullet', dmg:30, rng:265, rof:2.2, hits:'g',  vs:[.12,3],   acc:.93 },
+  atgmMsl:  { name:'反坦克导弹',proj:'rocket', dmg:56, rng:245, rof:2.6, hits:'g',  vs:[2.2,.5],  acc:.88 },
+  tankGun:  { name:'120主炮',   proj:'shell',  dmg:25, rng:185, rof:1.3, hits:'g',  vs:[1.2,1],   acc:.80 },
+  coax:     { name:'同轴机枪',  proj:'bullet', dmg:4,  rng:112, rof:.45, hits:'ga', vs:[.25,1.3], acc:.60, burst:3 },
+  autocan:  { name:'30机炮',    proj:'bullet', dmg:8,  rng:155, rof:.28, hits:'ga', vs:[.55,1.3], acc:.60 },
+  flakGun:  { name:'高炮弹幕',  proj:'flak',   dmg:20, rng:215, rof:.45, hits:'a',  vs:[1,1],     acc:.48, burst:2 },
+  samMsl:   { name:'防空导弹',  proj:'rocket', dmg:72, rng:430, rof:3.2, hits:'a',  vs:[1,1],     acc:.85 },
+  howitzer: { name:'155榴弹',   proj:'bomb',   dmg:40, rng:400, rof:3.0, hits:'g',  vs:[1,1.2],   splash:56 },
+  mlrsSalvo:{ name:'火箭弹齐射',proj:'rocket', dmg:24, rng:490, rof:6.0, hits:'g',  vs:[.8,1.4],  splash:44, burst:6 },
+  /* ── 机载武器（带弹药） ── */
+  aam:      { name:'空空导弹',  proj:'rocket', dmg:58, rng:230, rof:4.2, hits:'a',  vs:[1,1],     acc:.86, ammo:4 },
+  gunpod:   { name:'航炮',      proj:'bullet', dmg:8,  rng:145, rof:.20, hits:'ga', vs:[.8,1],    acc:.68, ammo:70 },
+  gatling:  { name:'加特林舔地',proj:'bullet', dmg:13, rng:130, rof:.12, hits:'g',  vs:[1.4,1.1], acc:.62, ammo:140, burst:2 },
+  agRocket: { name:'对地火箭',  proj:'rocket', dmg:22, rng:185, rof:2.2, hits:'g',  vs:[.9,1.2],  splash:30, burst:4, ammo:6 },
+  heliAT:   { name:'挂载反坦克',proj:'rocket', dmg:44, rng:205, rof:1.8, hits:'g',  vs:[2,.8],    acc:.86, ammo:8 },
+  heliGun:  { name:'机头机炮',  proj:'bullet', dmg:6,  rng:120, rof:.35, hits:'ga', vs:[.4,1.2],  acc:.60, ammo:90, burst:3 },
+  bombLoad: { name:'航弹',      proj:'drop',   dmg:56, rng:88,  rof:2.6, hits:'g',  vs:[1,1.2],   splash:70, burst:2, ammo:5 },
+  droneMsl: { name:'精确制导弹',proj:'rocket', dmg:40, rng:235, rof:3.4, hits:'g',  vs:[1.6,1],   acc:.90, ammo:4 },
+  warhead:  { name:'战斗部',    proj:'ram',    dmg:120,rng:22,  rof:9,   hits:'g',  vs:[1.5,1.5], splash:86 },
+};
 
-  fig:   { name:'战斗机', sub:'又快又脆',  key:'fig',   k:'q', layer:'a', hp:72,  dmg:8,   rng:145, rof:.20, spd:68, hits:'ga', armor:1, vs:[.8,1],   proj:'bullet', h:12, alt:250, fuel:30, ammo:60, weight:13 },
-  atk:   { name:'攻击机', sub:'贴地扫射',  key:'atk',   k:'w', layer:'a', hp:125, dmg:13,  rng:130, rof:.16, spd:46, hits:'g',  armor:1, vs:[1.4,1.1],proj:'bullet', h:14, alt:95,  fuel:38, ammo:80, weight:11 },
-  heli:  { name:'武直',   sub:'悬停反坦克',key:'heli',  k:'e', layer:'a', hp:108, dmg:44,  rng:205, rof:1.8, spd:21, hits:'g',  armor:1, vs:[2,.8],   proj:'rocket', h:14, alt:52,  fuel:52, ammo:10, weight:11 },
-  bmb:   { name:'轰炸机', sub:'地毯轰炸',  key:'bmb',   k:'r', layer:'a', hp:155, dmg:56,  rng:85,  rof:2.6, spd:36, hits:'g',  armor:1, vs:[1,1.2],  proj:'drop',   h:16, splash:70, burst:2, alt:175, fuel:40, ammo:5, weight:8 },
-  drone: { name:'无人机', sub:'察打一体',  key:'drone', k:'t', layer:'a', hp:46,  dmg:40,  rng:235, rof:3.4, spd:27, hits:'g',  armor:0, vs:[1.6,1],  proj:'rocket', h:10, alt:205, fuel:75, ammo:4, weight:9 },
-  cruise:{ name:'巡航导弹',sub:'一次性·可拦截',key:'cruise',k:'y',layer:'a',hp:22, dmg:120,rng:22,  rof:9,   spd:74, hits:'g',  armor:0, vs:[1.5,1.5],proj:'ram',    h:8,  splash:86, alt:120, suicide:1, weight:4 },
+/* ══════════════════════ 编制表 ══════════════════════
+   spd/hold 写"屏幕手感值"，启动时换算成世界单位
+   armor 装甲 · alt 巡航高度 · fuel 滞空秒数 · w 挂载的武器            */
+const UNITS = {
+  inf:   { name:'步兵',   sub:'步枪+手雷',  k:'1', layer:'g', hp:34,  spd:26, armor:0, h:24, w:['rifle','grenade'],     weight:30 },
+  mg:    { name:'机枪班', sub:'三连发压制', k:'2', layer:'g', hp:46,  spd:15, armor:0, h:18, w:['hmg'],                 weight:16 },
+  sniper:{ name:'狙击手', sub:'专杀步兵',   k:'3', layer:'g', hp:26,  spd:18, armor:0, h:12, w:['srifle'],              weight:8 },
+  atgm:  { name:'反坦克组',sub:'导弹+自卫枪',k:'4', layer:'g', hp:40,  spd:15, armor:0, h:22, w:['atgmMsl','rifle'],     weight:11 },
+  tank:  { name:'主战坦克',sub:'主炮+同轴枪',k:'5', layer:'g', hp:195, spd:15, armor:1, h:16, w:['tankGun','coax'],      weight:18 },
+  ifv:   { name:'步战车', sub:'机炮+反坦克',k:'6', layer:'g', hp:112, spd:31, armor:1, h:14, w:['autocan','atgmMsl'],   weight:14 },
+  aa:    { name:'高射炮', sub:'近程弹幕',   k:'7', layer:'g', hp:95,  spd:12, armor:1, h:16, w:['flakGun'], hold:210,   weight:11 },
+  sam:   { name:'防空导弹',sub:'远程猎机',   k:'8', layer:'g', hp:88,  spd:10, armor:1, h:18, w:['samMsl'],  hold:300,   weight:8 },
+  arty:  { name:'榴弹炮', sub:'超远溅射',   k:'9', layer:'g', hp:105, spd:8,  armor:1, h:16, w:['howitzer'],            weight:9 },
+  mlrs:  { name:'火箭炮', sub:'6发齐射',    k:'0', layer:'g', hp:92,  spd:7,  armor:1, h:18, w:['mlrsSalvo'],           weight:7 },
+
+  fig:   { name:'战斗机', sub:'空空弹+航炮',k:'q', layer:'a', hp:72,  spd:68, armor:1, h:12, w:['aam','gunpod'],        alt:250, fuel:30, weight:13 },
+  atk:   { name:'攻击机', sub:'舔地加特林', k:'w', layer:'a', hp:125, spd:46, armor:1, h:14, w:['gatling','agRocket'],  alt:95,  fuel:38, weight:11 },
+  heli:  { name:'武直',   sub:'反坦克+机炮',k:'e', layer:'a', hp:108, spd:21, armor:1, h:14, w:['heliAT','heliGun'],    alt:52,  fuel:52, weight:11 },
+  bmb:   { name:'轰炸机', sub:'地毯轰炸',   k:'r', layer:'a', hp:155, spd:36, armor:1, h:16, w:['bombLoad'],            alt:175, fuel:40, weight:8 },
+  drone: { name:'无人机', sub:'察打一体',   k:'t', layer:'a', hp:46,  spd:27, armor:0, h:10, w:['droneMsl'],            alt:205, fuel:75, weight:9 },
+  cruise:{ name:'巡航导弹',sub:'一次性·可拦截',k:'y',layer:'a',hp:22, spd:74, armor:0, h:8,  w:['warhead'],             alt:120, fuel:0, suicide:1, weight:4 },
 };
-/* 基础精度：制导武器准，弹幕/压制武器散。溅射弹不判命中（给 1），
-   它们靠落点散布自然产生偏差，炸偏了周围照样吃溅射伤害。 */
-const ACC = {
-  inf:.68, mg:.52, sniper:.93, atgm:.88, tank:.8, ifv:.6, aa:.48, sam:.85,
-  arty:1, mlrs:1, fig:.68, atk:.62, heli:.86, bmb:1, drone:.9, cruise:1,
-};
+
 const K = WORLD_W / 800;                       // 屏幕手感 → 世界单位
+for (const n in WPN) {
+  const w = WPN[n];
+  w.id = n;
+  w.rng *= K;
+  if (w.splash) w.splash *= K;
+  if (w.acc === undefined) w.acc = 1;          // 溅射武器不判必中必失
+}
 for (const k in UNITS) {
   const d = UNITS[k];
-  d.rng *= K; d.spd *= K;
+  d.key = k;
+  d.spd *= K;
   if (d.hold) d.hold *= K;
-  if (d.splash) d.splash *= K;
-  d.acc = ACC[k] === undefined ? .75 : ACC[k];
+  d.ws = d.w.map(n => WPN[n]);
+  /* 派生：最远/最近武器射程、能打的层的并集、总 dps（战力估值用） */
+  d.rngMax = Math.max.apply(null, d.ws.map(w => w.rng));
+  d.rngMin = Math.min.apply(null, d.ws.map(w => w.rng));
+  d.hitAny = (d.ws.some(w => w.hits.indexOf('g') >= 0) ? 'g' : '') +
+             (d.ws.some(w => w.hits.indexOf('a') >= 0) ? 'a' : '');
+  d.dps = d.ws.reduce((s, w) => s + w.dmg * (w.burst || 1) / w.rof, 0);
+  d.hasAmmo = d.ws.some(w => w.ammo !== undefined);
 }
 const GROUND = ['inf','mg','sniper','atgm','tank','ifv','aa','sam','arty','mlrs'];
 const AIR = ['fig','atk','heli','bmb','drone','cruise'];
@@ -343,8 +383,10 @@ function spawn(side, key, wx, wz) {
     id: uid++, side, d,
     wx: clamp(wx, -30, WORLD_W + 30), wz: clamp(wz, .02, .98),
     alt: d.layer === 'a' ? d.alt : 0,
-    hp: d.hp, max: d.hp, cd: rnd(0, d.rof), tgt: null, anc: null, retgt: 0,
-    fuel: d.fuel || 0, ammo: d.ammo || 0, rtb: 0,
+    hp: d.hp, max: d.hp, tgt: null, anc: null, retgt: 0,
+    /* 每门武器一份独立的装填计时与弹药 */
+    ws: d.ws.map(w => ({ d: w, cd: rnd(0, w.rof), ammo: w.ammo === undefined ? Infinity : w.ammo })),
+    fuel: d.fuel || 0, rtb: 0, fk: '',
     face: side === 0 ? 1 : -1,
     sd: (Math.random() * 1e6) | 0, ph: Math.random() * 10,
     st: rnd(.72, 1.04), flash: 0, done: 0, silent: 0, noloss: 0,
@@ -359,7 +401,7 @@ function weightedKey() {
 /* 战力估值：血 + 火力，用于自动平衡 */
 function power(side) {
   let p = 0;
-  for (const u of units) if (u.side === side) p += u.hp + u.d.dmg * (u.d.burst || 1) * 2.2;
+  for (const u of units) if (u.side === side) p += u.hp + u.d.dps * 2.2;
   return p;
 }
 /* 挑兵种：先补自家编成缺口（免得某个军种被打绝种），再按对手编成挑克制 */
@@ -368,7 +410,7 @@ function counterKey(side) {
   let air = 0, armor = 0, soft = 0, myAir = 0, myAD = 0, myTot = 0;
   for (const u of units) {
     if (u.side === foe) { u.d.layer === 'a' ? air++ : (u.d.armor ? armor++ : soft++); }
-    else { myTot++; if (u.d.layer === 'a') myAir++; if (u.d.hits.indexOf('a') >= 0) myAD++; }
+    else { myTot++; if (u.d.layer === 'a') myAir++; if (u.d.hitAny.indexOf('a') >= 0) myAD++; }
   }
   const tot = air + armor + soft || 1, mt = myTot || 1, r = Math.random();
   if (myAir / mt < .18 && r < .55) return pick(['fig','atk','heli','bmb','drone']);
@@ -416,9 +458,36 @@ function beep(type) {
 }
 
 /* ══════════════════════ 战斗逻辑（世界坐标） ══════════════════════ */
-const canHit = (a, b) => a.d.hits.indexOf(b.d.layer) >= 0;
+const canHit = (a, b) => a.d.hitAny.indexOf(b.d.layer) >= 0;
 const dmgTo = (p, v) => p.dmg * (v.d.armor ? p.vs[0] : p.vs[1]);
 const dist3 = (a, b) => Math.hypot(b.wx - a.wx, (b.wz - a.wz) * DEPTH, (b.alt || 0) - (a.alt || 0));
+
+/* 挑武器：在打得着、装填好、有弹、够射程的武器里，选对这个目标
+   单位时间有效伤害最高的那门。导弹自然被留给装甲和飞机，机枪留给步兵。 */
+function pickWeapon(u, t, dist) {
+  let best = null, bestEff = 0;
+  for (const w of u.ws) {
+    const W = w.d;
+    if (w.cd > 0 || w.ammo <= 0) continue;
+    if (W.hits.indexOf(t.d.layer) < 0) continue;
+    if (dist > W.rng) continue;
+    let eff = W.dmg * (t.d.armor ? W.vs[0] : W.vs[1]) * (W.burst || 1) / W.rof;
+    /* 反装甲专用弹别拿去打步兵 —— 弹药金贵，留给硬目标 */
+    if (!t.d.armor && W.vs[0] / W.vs[1] > 2) eff *= .45;
+    /* 溅射弹按目标周围挤了多少人加权：敌人扎堆时才值得甩手雷/齐射 */
+    if (W.splash) {
+      let cluster = 0;
+      for (const v of units) {
+        if (v.side === u.side || v.hp <= 0) continue;
+        if (Math.hypot(v.wx - t.wx, (v.wz - t.wz) * DEPTH) < W.splash) cluster++;
+      }
+      eff *= Math.max(1, cluster * .85);
+    }
+    if (eff > bestEff) { bestEff = eff; best = w; }
+  }
+  return best;
+}
+const outOfAmmo = u => u.ws.every(w => w.ammo <= 0);
 
 function findTarget(u) {
   let best = null, bd = 1e18;
@@ -471,10 +540,10 @@ function update(dt) {
     const t = u.tgt, fwd = u.side === 0 ? 1 : -1, sp = u.d.spd;
     const dist = t ? dist3(u, t) : 1e18;
 
-    /* 油料/弹药：耗尽即返航 */
+    /* 油料/弹药：耗尽即返航（所有挂载都打空了也算） */
     if (u.d.layer === 'a' && !u.d.suicide) {
       u.fuel -= dt;
-      if (!u.rtb && (u.fuel <= 0 || u.ammo <= 0)) u.rtb = 1;
+      if (!u.rtb && (u.fuel <= 0 || outOfAmmo(u))) u.rtb = 1;
     }
 
     if (u.d.layer === 'a') {
@@ -499,9 +568,11 @@ function update(dt) {
       } else {
         const wantAlt = (t && t.d.layer === 'a') ? t.alt : u.d.alt;
         if (t) {
+          /* 按最近武器的射程贴上去：攻击机才会飞到加特林射程内舔地，
+             战斗机也会从放导弹的距离一路压到航炮距离狗斗 */
           const d = dist || 1, ux = (t.wx - u.wx) / d, uz = (t.wz - u.wz) * DEPTH / d;
-          if (dist > u.d.rng * .78) { u.wx += ux * sp * dt; u.wz += uz * sp * dt / DEPTH; }
-          else if (dist < u.d.rng * .38) u.wx -= ux * sp * dt * .6;
+          if (dist > u.d.rngMin * .85) { u.wx += ux * sp * dt; u.wz += uz * sp * dt / DEPTH; }
+          else if (dist < u.d.rngMin * .35) u.wx -= ux * sp * dt * .6;
           else u.wz += uz * sp * dt * .3 / DEPTH;
         } else u.wx += fwd * sp * dt * .5;
         u.alt += (wantAlt - u.alt) * Math.min(1, dt * 1.4) + Math.sin(u.ph * 1.6 + u.sd) * 14 * dt;
@@ -509,7 +580,7 @@ function update(dt) {
       }
       u.alt = clamp(u.alt, 18, 360);
     } else {
-      const a = u.anc, stop = (u.d.hold || u.d.rng * .9) * u.st;
+      const a = u.anc, stop = (u.d.hold || u.d.rngMax * .9) * u.st;
       if (a) {
         const dx = a.wx - u.wx, dz = (a.wz - u.wz) * DEPTH, d = Math.hypot(dx, dz) || 1;
         if (d > stop) { u.wx += dx / d * sp * dt; u.wz += dz / d * sp * dt * .22 / DEPTH; }
@@ -538,11 +609,15 @@ function update(dt) {
       }
     }
 
-    u.cd -= dt;
-    if (t && !u.d.suicide && !u.rtb && dist <= u.d.rng && u.cd <= 0) {
-      u.cd = u.d.rof * rnd(.85, 1.15);
-      fire(u, t);
-      if (u.d.ammo) u.ammo--;
+    /* 每门武器独立装填，每帧最多打一门（会自然交替使用） */
+    for (const w of u.ws) if (w.cd > 0) w.cd -= dt;
+    if (t && !u.d.suicide && !u.rtb) {
+      const wp = pickWeapon(u, t, dist);
+      if (wp) {
+        wp.cd = wp.d.rof * rnd(.85, 1.15);
+        if (wp.ammo !== Infinity) wp.ammo--;
+        fire(u, t, wp);
+      }
     }
   }
 
@@ -600,21 +675,21 @@ function update(dt) {
   }
 }
 
-function fire(u, t) {
-  const n = u.d.burst || 1;
+function fire(u, t, wp) {
+  const W = wp.d, n = W.burst || 1;
   const d = dist3(u, t);
-  for (let i = 0; i < n; i++) shoot(u, t, i * (u.d.proj === 'rocket' ? .16 : .09), d);
-  u.flash = 1;
-  beep(u.d.proj === 'bullet' || u.d.proj === 'flak' ? 'shot' : 'pew');
+  for (let i = 0; i < n; i++) shoot(u, t, i * (W.proj === 'rocket' ? .16 : .09), d, W);
+  u.flash = 1; u.fk = W.proj;
+  beep(W.proj === 'bullet' || W.proj === 'flak' ? 'shot' : 'pew');
 }
-function shoot(u, t, delay, d3) {
-  const k = u.d.proj, splash = u.d.splash || 0;
-  const far = clamp((d3 || 0) / u.d.rng, 0, 1);          // 0=贴脸 1=射程极限
+function shoot(u, t, delay, d3, W) {
+  const k = W.proj, splash = W.splash || 0;
+  const far = clamp((d3 || 0) / W.rng, 0, 1);             // 0=贴脸 1=射程极限
 
   /* 单体弹算一次命中判定：越远越飘、打飞机更难、打大块头更容易 */
   let miss = false;
   if (!splash) {
-    let acc = u.d.acc * (1 - .38 * far);
+    let acc = W.acc * (1 - .38 * far);
     if (t.d.layer === 'a') acc *= (u.d.layer === 'g' ? .62 : .82);   // 打空中目标难
     if (t.d.armor) acc *= 1.18;                                      // 车辆是大目标
     if (t.d.spd > 40 * K) acc *= .82;                                // 高速目标更难咬住
@@ -631,7 +706,7 @@ function shoot(u, t, delay, d3) {
     ea += t.d.layer === 'a' ? rnd(-off, off) * .7 : rnd(0, off) * .5;
   }
   const p = {
-    kind: k, side: u.side, dmg: u.d.dmg, vs: u.d.vs, splash,
+    kind: k, side: u.side, dmg: W.dmg, vs: W.vs, splash,
     sx: u.wx + u.face * 18, sz: u.wz, sa: (u.alt || 0) + (u.d.layer === 'g' ? u.d.h * .6 : 0),
     ex, ez, ea, miss,
     t: 0, pt: 0, delay: delay || 0, life: 8, col: SIDE_COL[u.side], sd: (Math.random() * 1e6) | 0,
@@ -645,7 +720,8 @@ function shoot(u, t, delay, d3) {
 }
 function detonate(u) {
   u.hp = 0; u.silent = 1; u.done = 1; lost[u.side]++;
-  hit({ ex: u.wx, ez: u.wz, ea: u.alt, dmg: u.d.dmg, vs: u.d.vs, splash: u.d.splash, side: u.side, sd: u.sd, miss: 0 });
+  const W = u.ws[0].d;
+  hit({ ex: u.wx, ez: u.wz, ea: u.alt, dmg: W.dmg, vs: W.vs, splash: W.splash, side: u.side, sd: u.sd, miss: 0 });
 }
 function hit(p) {
   if (p.miss) { fx.push({ k: 'puff', wx: p.ex, wz: p.ez, alt: p.ea, t: 0, dur: .3, sd: p.sd }); return; }
@@ -953,6 +1029,13 @@ function drawUnit(u, alpha, dead) {
   ctx.lineCap = 'round';
   seed(u.sd + ((tick * 5) | 0));                            // 每秒抖 5 次 = 手绘翻页感
   (DRAW[u.d.key] || DRAW.inf)(u, u.side === 1);
+  /* 发射导弹/火箭要看得出跟打机炮不一样：后方腾起两团尾烟 */
+  if (!dead && u.flash > .45 && (u.fk === 'rocket' || u.fk === 'bomb')) {
+    ctx.strokeStyle = '#9c9484'; ctx.lineWidth = 1.2 / sc;
+    const y0 = u.d.layer === 'g' ? -u.d.h * .45 : 1;
+    rcirc(-15, y0, 3.5 + u.flash * 3.5, 2.6);
+    rcirc(-24, y0 - 3, 2.5 + u.flash * 2.5, 2.4);
+  }
   ctx.restore();
   if (!dead) drawHP(u, q, sc);
 }
@@ -970,9 +1053,11 @@ function drawHP(u, q, sc) {
   seed(u.sd);
   ctx.strokeStyle = 'rgba(59,58,54,.7)'; ctx.lineWidth = 1;
   rpoly([[q[0] - w / 2, y], [q[0] + w / 2, y], [q[0] + w / 2, y + h], [q[0] - w / 2, y + h]], true, .9);
-  /* 空中单位的油料/弹药余量（红＝已在返航） */
+  /* 空中单位的油料/弹药余量：取油量与"最充裕那门武器"的较小者（红＝已在返航） */
   if (u.d.fuel) {
-    const rr = Math.min(u.fuel / u.d.fuel, u.d.ammo ? u.ammo / u.d.ammo : 1);
+    let am = 0;
+    for (const w of u.ws) if (w.d.ammo) am = Math.max(am, w.ammo / w.d.ammo);
+    const rr = Math.min(u.fuel / u.d.fuel, u.d.hasAmmo ? am : 1);
     ctx.globalAlpha = 1;
     ctx.fillStyle = 'rgba(255,255,255,.5)';
     ctx.fillRect(q[0] - w / 2, y + h + 1.4, w, 1.8);
@@ -1148,6 +1233,13 @@ function buildTools() {
     const d = UNITS[k], b = document.createElement('button');
     b.innerHTML = d.name + '<small>' + d.k.toUpperCase() + ' ' + d.sub + '</small>';
     b.dataset.k = k;
+    /* 悬停看挂载明细 */
+    b.title = d.name + '　血 ' + d.hp + '　速 ' + Math.round(d.spd / K) + '\n' +
+      d.ws.map(w => '· ' + w.name + '：伤 ' + w.dmg + (w.burst ? '×' + w.burst : '') +
+        '　射程 ' + Math.round(w.rng / K) + '　装填 ' + w.rof + 's' +
+        '　对' + (w.hits === 'g' ? '地' : w.hits === 'a' ? '空' : '地空') +
+        (w.splash ? '　溅射 ' + Math.round(w.splash / K) : '') +
+        (w.ammo ? '　弹 ' + w.ammo : '')).join('\n');
     if (k === curTool) b.className = 'on';
     b.onclick = () => selTool(k);
     row.appendChild(b);
