@@ -2,6 +2,9 @@
 
 *The war I used to draw in the margins of my school notebooks — rebuilt so that it fights itself.*
 
+**[▶ Play it in your browser](https://fong353.github.io/notebook-war/)**
+ · [Cold War version](https://fong353.github.io/notebook-war/cold-war.html)
+
 ![Battle](docs/battle.png)
 
 ## Why I built this
@@ -41,7 +44,8 @@ A single HTML file. No build step, no dependencies, no network calls — open it
 
 ## Running it
 
-Open `index.html` in a browser. That's it.
+[Play online](https://fong353.github.io/notebook-war/), or open `index.html` from a local copy —
+it needs no server, no build step and makes no network calls.
 
 - `?warmup=45` skips ahead 45 in-game seconds, so you land in the middle of a fight instead of at
   the opening deployment. Handy for screenshots.
