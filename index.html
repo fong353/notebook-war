@@ -281,20 +281,22 @@ const UNITS = {
 
   fig:   { name:'战斗机', sub:'空空弹+航炮',k:'q', layer:'a', hp:72,  spd:68, armor:1, h:12, w:['aam','gunpod'],       alt:250, fuel:30, weight:13 },
   atk:   { name:'攻击机', sub:'舔地加特林', k:'w', layer:'a', hp:125, spd:46, armor:1, h:14, w:['gatling','agRocket'], alt:95,  fuel:38, weight:11 },
-  heli:  { name:'武直',   sub:'反坦克+机炮',k:'e', layer:'a', hp:108, spd:21, armor:1, h:14, w:['heliAT','heliGun'],   alt:52,  fuel:52, weight:11 },
+  heli:  { name:'武直',   sub:'悬停反坦克', k:'e', layer:'a', hp:108, spd:21, armor:1, h:14, w:['heliAT','heliGun'],   alt:52,  fuel:52, wing:'rotor', weight:11 },
   bmb:   { name:'轰炸机', sub:'地毯轰炸',   k:'r', layer:'a', hp:155, spd:36, armor:1, h:16, w:['bombLoad'],           alt:175, fuel:40, weight:8 },
-  drone: { name:'无人机', sub:'察打一体',   k:'t', layer:'a', hp:46,  spd:27, armor:0, h:10, w:['droneMsl'],           alt:205, fuel:75, weight:9 },
+  drone: { name:'无人机', sub:'盘旋察打',   k:'t', layer:'a', hp:46,  spd:27, armor:0, h:10, w:['droneMsl'],           alt:205, fuel:75, loiter:1, weight:9 },
   cruise:{ name:'巡航导弹',sub:'一次性·可拦截',k:'y',layer:'a',hp:22, spd:74, armor:0, h:8,  w:['warhead'],            alt:120, fuel:0, suicide:1, weight:4 },
 };
 
 const K = WORLD_W / 800;
+const ROF_K = 1.9;          // 装填时间统一放慢，让每一发看得清、血条掉得住
 for (const n in WPN) {
   const w = WPN[n];
   w.id = n; w.rng *= K;
   if (w.splash) w.splash *= K;
   if (w.acc === undefined) w.acc = 1;
   if (w.supp === undefined) w.supp = .1;
-  w.supp *= 1.9;            // 实测压制起不来，交火点太散；整体调高
+  w.supp *= 2.4;            // 兵力压到 17 后交火更散，压制力再补一档
+  w.rof *= ROF_K;           // 全局装填倍率：射速太快看不清单发，整体放慢
 }
 for (const k in UNITS) {
   const d = UNITS[k];
@@ -310,6 +312,8 @@ for (const k in UNITS) {
   d.hasAmmo = d.ws.some(w => w.ammo !== undefined);
   if (d.morale === undefined) d.morale = 1.5;
   if (d.grit === undefined) d.grit = 0;      // 空中单位不撤退，走返航逻辑
+  /* 固定翼不能停在空中：只有旋翼可以悬停 */
+  if (d.layer === 'a' && !d.wing) d.wing = 'fixed';
 }
 const GROUND = ['inf','mg','sniper','atgm','tank','ifv','aa','sam','arty','mlrs','supply','medic'];
 const AIR = ['fig','atk','heli','bmb','drone','cruise'];
@@ -431,6 +435,7 @@ function spawn(side, key, wx, wz) {
     st: rnd(.72, 1.04), flash: 0, done: 0, silent: 0, noloss: 0,
     sup: 0, prone: 0, vet: 0, rank: 0, kills: 0,
     mode: 0, aimEl: 0, boost: 0, cover: null, link: null, smokeT: 0,
+    turnT: 0, orb: Math.random() * 6.3,
   };
   units.push(u);
   return u;
@@ -472,8 +477,8 @@ function reinforce(side, key) {
         side === 0 ? rnd(-20, 90) : rnd(WORLD_W - 90, WORLD_W + 20), rnd(.05, .95));
 }
 function initArmies() {
-  const plan = ['inf','inf','inf','inf','mg','sniper','tank','tank','ifv','atgm','aa','sam',
-                'arty','mlrs','supply','medic','fig','heli','atk','drone'];
+  const plan = ['inf','inf','inf','mg','sniper','tank','ifv','atgm','aa','sam',
+                'arty','supply','medic','fig','heli','atk'];    // 开局就别摆太满
   plan.forEach(k => {
     spawn(0, k, rnd(20, WORLD_W * .26), rnd(.05, .95));
     spawn(1, k, rnd(WORLD_W * .74, WORLD_W - 20), rnd(.05, .95));
@@ -579,10 +584,18 @@ function suppress(wx, wz, r, amount, side) {
     if (d < r) v.sup = Math.min(1.5, v.sup + amount * (1 - d / r) / v.d.morale);
   }
 }
+/* 掩体是步兵专用的：沙袋和弹坑挡得住人，挡不住也用不着车 */
+const usesCover = u => u.d.layer === 'g' && !u.d.armor;
 function inCover(u) {
   for (const c of covers) if (Math.hypot(u.wx - c.wx, (u.wz - c.wz) * DEPTH) < c.r) return c;
   for (const c of craters) if (Math.hypot(u.wx - c.wx, (u.wz - c.wz) * DEPTH) < c.r) return c;
   return null;
+}
+function nearestCover(u, maxD) {
+  let best = null, bd = maxD;
+  for (const c of covers) { const d = Math.hypot(u.wx - c.wx, (u.wz - c.wz) * DEPTH); if (d < bd) { bd = d; best = c; } }
+  for (const c of craters) { const d = Math.hypot(u.wx - c.wx, (u.wz - c.wz) * DEPTH); if (d < bd) { bd = d; best = c; } }
+  return best;
 }
 function pushLog(txt) {
   logs.unshift(txt);
@@ -602,8 +615,8 @@ function update(dt) {
     if (reTimer <= 0) {
       /* 维持编制：原来补得比死得慢，战场稀成一条线，压制/掩体/支援
          这些"火力密度"机制全都体现不出来。改成朝目标兵力补齐。 */
-      reTimer = .9;
-      const TARGET = 27;
+      reTimer = 1.15;
+      const TARGET = 17;          // 太多就看不清谁在打谁；密度靠压制强度补回来
       let nb = 0, nr = 0;
       for (const u of units) u.side === 0 ? nb++ : nr++;
       const cap = [nb, nr];
@@ -623,7 +636,7 @@ function update(dt) {
     const air = u.d.layer === 'a';
     u.flash = Math.max(0, u.flash - dt * 4);
     u.boost = Math.max(0, u.boost - dt);
-    u.sup = Math.max(0, u.sup - dt * (u.cover ? .3 : .17));      // 有掩体压制退得快
+    u.sup = Math.max(0, u.sup - dt * (u.cover ? .28 : .15));     // 有掩体压制退得快
     u.retgt -= dt;
 
     /* 卧倒：压制到一定程度步兵就趴下不动了（装甲车辆不趴） */
@@ -631,7 +644,7 @@ function update(dt) {
 
     if (u.retgt <= 0 || !u.tgt || u.tgt.hp <= 0) {
       u.tgt = findTarget(u);
-      if (!air) { u.anc = findAnchor(u); u.cover = inCover(u); }
+      if (!air) { u.anc = findAnchor(u); u.cover = usesCover(u) ? inCover(u) : null; }
       u.retgt = .3 + Math.random() * .3;
     }
     const t = u.tgt, fwd = u.side === 0 ? 1 : -1;
@@ -673,9 +686,10 @@ function update(dt) {
         if (u.wx < -190 || u.wx > WORLD_W + 190) { u.hp = 0; u.silent = 1; u.noloss = 1; }
       } else if (u.d.suicide) {
         if (t) {
+          /* 自杀弹要真撞上去，三个方向都得收敛（wz 记得换算成世界单位再折回） */
           const d = dist3(u, t) || 1;
           u.wx += (t.wx - u.wx) / d * sp * dt;
-          u.wz += (t.wz - u.wz) / d * sp * dt;
+          u.wz += (t.wz - u.wz) * DEPTH / d * sp * dt / DEPTH;
           u.alt += ((t.alt || 0) - u.alt) / d * sp * dt;
           if (dist3(u, t) < 30 * K) { detonate(u); continue; }
         } else { u.wx += fwd * sp * dt; u.alt += (u.d.alt - u.alt) * dt; }
@@ -683,12 +697,36 @@ function update(dt) {
       } else {
         const dist = t ? dist3(u, t) : 1e18;
         const wantAlt = (t && t.d.layer === 'a') ? t.alt : u.d.alt;
-        if (t) {
-          const d = dist || 1, ux = (t.wx - u.wx) / d, uz = (t.wz - u.wz) * DEPTH / d;
-          if (dist > u.d.rngMin * .85) { u.wx += ux * sp * dt; u.wz += uz * sp * dt / DEPTH; }
-          else if (dist < u.d.rngMin * .35) u.wx -= ux * sp * dt * .6;
-          else u.wz += uz * sp * dt * .3 / DEPTH;
-        } else u.wx += fwd * sp * dt * .5;
+        if (u.d.wing === 'rotor') {
+          /* ── 旋翼：可以悬停，可以倒着退，稳稳吊在射程上打 ── */
+          if (t) {
+            const d = dist || 1, ux = (t.wx - u.wx) / d, uz = (t.wz - u.wz) * DEPTH / d;
+            if (dist > u.d.rngMin * .85) { u.wx += ux * sp * dt; u.wz += uz * sp * dt / DEPTH; }
+            else if (dist < u.d.rngMin * .35) u.wx -= ux * sp * dt * .6;
+            else u.wz += uz * sp * dt * .3 / DEPTH;
+          } else u.wx += fwd * sp * dt * .5;
+        } else if (u.d.loiter && t && dist < u.d.rngMax * .95) {
+          /* ── 察打无人机：吊在目标头上绕圈盘旋 ── */
+          u.orb = (u.orb === undefined ? Math.random() * 6.3 : u.orb) + dt * .55;
+          const R = u.d.rngMax * .62;
+          u.wx += (t.wx + Math.cos(u.orb) * R - u.wx) * Math.min(1, dt * 1.2);
+          u.wz += (t.wz + Math.sin(u.orb) * R * .5 / DEPTH - u.wz) * Math.min(1, dt * 1.2);
+        } else if (t) {
+          /* ── 固定翼：切进射程，然后在射程上小幅前后游弋 ──
+             用正弦驱动而不是"飞过头就脱离"的状态机：允许速度过零点
+             （也就是允许短暂静止），代码简单、不会卡死。
+             注意水平推进不能写成 (t.wx-u.wx)/dist * sp —— dist 是三维的，
+             飞机有高度，水平距离趋零时速度会渐近归零，飞机就钉在目标
+             头顶不动了（这个 bug 实测抓到过） */
+          const dz = t.wz - u.wz;
+          if (dist > u.d.rngMin * .85) {
+            u.wx += Math.sign(t.wx - u.wx) * sp * dt;         // 恒速切入，不做归一化收敛
+            u.wz += Math.sign(dz) * Math.min(Math.abs(dz), sp * dt * .5 / DEPTH);
+          } else {
+            u.wx += Math.sin(tick * .55 + u.sd) * sp * dt * .5;   // 在射程上来回游弋
+            u.wz += Math.sign(dz) * Math.min(Math.abs(dz), sp * dt * .2 / DEPTH);
+          }
+        } else u.wx += fwd * sp * dt;                         // 没目标也得往前飞
         u.alt += (wantAlt - u.alt) * Math.min(1, dt * 1.4) + Math.sin(u.ph * 1.6 + u.sd) * 14 * dt;
         u.wx = clamp(u.wx, -180, WORLD_W + 180);
       }
@@ -699,11 +737,20 @@ function update(dt) {
       if (Math.abs(u.wx - home) > 30) u.wx += Math.sign(home - u.wx) * sp * dt;
     } else {
       /* ── 地面推进：停在自己最远武器的射程上；被压制/趴下就别动 ── */
-      const a = u.anc, stop = (u.d.hold || u.d.rngMax * .9) * u.st;
-      if (a) {
-        const dx = a.wx - u.wx, dz = (a.wz - u.wz) * DEPTH, d = Math.hypot(dx, dz) || 1;
-        if (d > stop) { u.wx += dx / d * sp * dt; u.wz += dz / d * sp * dt * .22 / DEPTH; }
-      } else u.wx += fwd * sp * dt;
+      let ck = null;
+      if (usesCover(u) && u.sup > .4 && !u.cover) ck = nearestCover(u, 170 * K);
+      if (ck) {
+        /* 步兵吃到火力，先往最近的沙袋/弹坑里钻，不硬顶着推进 */
+        const dx = ck.wx - u.wx, dz = (ck.wz - u.wz) * DEPTH, d = Math.hypot(dx, dz) || 1;
+        u.wx += dx / d * sp * dt * 1.25;
+        u.wz += dz / d * sp * dt * .8 / DEPTH;
+      } else {
+        const a = u.anc, stop = (u.d.hold || u.d.rngMax * .9) * u.st;
+        if (a) {
+          const dx = a.wx - u.wx, dz = (a.wz - u.wz) * DEPTH, d = Math.hypot(dx, dz) || 1;
+          if (d > stop) { u.wx += dx / d * sp * dt; u.wz += dz / d * sp * dt * .22 / DEPTH; }
+        } else u.wx += fwd * sp * dt;
+      }
       u.wx = clamp(u.wx, 8, WORLD_W - 8);
     }
     u.wz = clamp(u.wz, .02, .98);
@@ -715,12 +762,14 @@ function update(dt) {
       u.aimEl += (want - u.aimEl) * Math.min(1, dt * 3.4);
     } else u.aimEl += (.12 - u.aimEl) * Math.min(1, dt * 1.6);
 
-    /* 掉头 */
+    /* 掉头（固定翼脱离途中保持航向，不许原地扭头） */
     let wantFace = u.face;
     if (u.rtb || u.mode === 1) wantFace = u.side === 0 ? -1 : 1;
     else if (t && Math.abs(t.wx - u.wx) > 25) wantFace = t.wx > u.wx ? 1 : -1;
     else if (!t) wantFace = fwd;
+    if (wantFace !== u.face) u.turnT = .4;                    // 翻面 → 短暂横滚
     u.face = wantFace;
+    u.turnT = Math.max(0, (u.turnT || 0) - dt);
 
     /* 别叠成一坨 */
     for (const v of units) {
@@ -1327,7 +1376,9 @@ function drawUnit(u, alpha, dead) {
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.translate(q[0], q[1]);
-  ctx.scale((u.face < 0 ? -1 : 1) * sc, sc);
+  /* 固定翼掉头时把机身压扁一下，当作侧倾横滚看 */
+  const roll = (u.turnT > 0 && u.d.wing === 'fixed') ? (1 - u.turnT / .4 * .72) : 1;
+  ctx.scale((u.face < 0 ? -1 : 1) * sc, sc * roll);
   ctx.strokeStyle = dead ? '#8d8778' : SIDE_COL[u.side];
   ctx.lineWidth = 1.7 / sc;
   ctx.lineCap = 'round';
@@ -1629,7 +1680,11 @@ let last = performance.now();
 function loop(now) {
   const dt = Math.min((now - last) / 1000, .05) * SLOW;
   last = now;
-  if (running) for (let i = 0; i < speed; i++) update(dt);
+  if (running) {
+    /* 拆成整数个子步，快进时才不会因为单步过大而抖 */
+    const n = Math.max(1, Math.ceil(speed));
+    for (let i = 0; i < n; i++) update(dt * speed / n);
+  }
   render();
   let nb = 0, nr = 0;
   for (const u of units) u.side === 0 ? nb++ : nr++;
@@ -1736,7 +1791,12 @@ function togglePlay() {
   $('play').classList.toggle('on', running);
 }
 $('play').onclick = togglePlay;
-$('spd').onclick = () => { speed = speed === 1 ? 2 : (speed === 2 ? 4 : 1); $('spd').textContent = speed + '×'; $('spd').classList.toggle('on', speed > 1); };
+const SPEEDS = [.5, 1, 2, 4];
+$('spd').onclick = () => {
+  speed = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length];
+  $('spd').textContent = speed + '×';
+  $('spd').classList.toggle('on', speed !== 1);
+};
 $('auto').onclick = () => { autoRe = !autoRe; $('auto').classList.toggle('on', autoRe); };
 $('snd').onclick = () => { sound = !sound; $('snd').classList.toggle('on', sound); if (sound) beep('shot'); };
 $('grid').onclick = () => { showGrid = !showGrid; $('grid').classList.toggle('on', showGrid); paper = null; };
