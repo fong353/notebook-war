@@ -415,7 +415,7 @@ let units = [], projs = [], fx = [], wrecks = [], smokes = [], works = [];
 let uid = 1, lost = [0, 0];
 let running = true, speed = 1, autoRe = true, sound = true, showGrid = true;
 let curSide = 0, curTool = 'inf';
-let over = false, reTimer = 0, tick = 0, shake = 0;
+let over = false, reTimer = 0, tick = 0;
 let logs = [], lastFavored = -1;
 /* 每方目标编制。默认 17 是"看得清谁在打谁"的值；
    ?units=40 之类可以摆出大军对峙的场面（截图、演示用） */
@@ -716,7 +716,6 @@ function pushLog(txt) {
 /* ══════════════════════════ 战斗：主更新 ══════════════════════════ */
 function update(dt) {
   tick += dt;
-  shake = Math.max(0, shake - dt * 2.2);
   /* 弹坑随时间渐隐：每隔一会儿把整块伤痕层擦掉一点 alpha，
      老坑被擦的次数多、先淡去，新坑还清楚 */
   scarFade += dt;
@@ -819,7 +818,8 @@ function update(dt) {
     if (air) {
       /* ── 空中 ── */
       u.ph += dt;
-      if (!u.d.suicide) {
+      /* fuel 0 = 不吃油（系留气球这类），别把它判成"油尽返航"飘出地图 */
+      if (!u.d.suicide && u.d.fuel) {
         u.fuel -= dt;
         if (!u.rtb && (u.fuel <= 0 || outOfAmmo(u))) {
           u.rtb = 1;
@@ -1050,10 +1050,8 @@ function update(dt) {
                     r: 36, t: -.16, dur: .46, sd: (Math.random() * 1e6) | 0 });
           fx.push({ k: 'debris', wx: u.wx, wz: u.wz, alt: u.alt, t: 0, dur: 1.25,
                     sd: (Math.random() * 1e6) | 0, n: 9 });
-          shake = Math.min(1, shake + .22);
         } else {
           boom(u.wx, u.wz, u.alt, 32);
-          if (u.d.armor) { scarCrater(u.wx, u.wz, 30); shake = Math.min(1, shake + .16); }
         }
         beep('boom');
         /* 战功记账：谁打死的，谁涨经验 */
@@ -1134,7 +1132,6 @@ function detonate(u) {
   const W = u.ws[0].d;
   hit({ ex: u.wx, ez: u.wz, ea: u.alt, dmg: W.dmg, vs: W.vs, splash: W.splash,
         supp: W.supp, side: u.side, sd: u.sd, miss: 0, owner: null });
-  shake = Math.min(1, shake + .4);
 }
 /* 造成伤害：装甲面前轻武器会跳弹（期望伤害不变，但看着有戏） */
 function applyDamage(p, v) {
@@ -1171,7 +1168,6 @@ function hit(p) {
     }
     suppress(p.ex, p.ez, r * 1.8, p.supp || .3, p.side);
     beep('boom');
-    if (r > 60 * K) shake = Math.min(1, shake + .12);
     return;
   }
   suppress(p.ex, p.ez, 62 * K, p.supp || .1, p.side);     // 子弹擦身而过也压人
@@ -1953,7 +1949,6 @@ function drawTip(u) {
 const zbuf = [];
 function render() {
   mainCtx.save();
-  if (shake > .01) mainCtx.translate((Math.random() - .5) * shake * 9, (Math.random() - .5) * shake * 6);
   drawPaper();
   for (const w of works) drawWork(w);
   zbuf.length = 0;

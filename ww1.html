@@ -207,6 +207,7 @@ const UI = {
   lgRally:  [' rallies ', ' 全线鼓舞 '],  lgUnits: [' units', ' 部队'],
   lgSmoke:  [' lays smoke', ' 施放烟幕'],
   lgDrop:   [' airborne drop', ' 空降突击队'],
+  lgMine:   [' blows a mine under the line', ' 引爆坑道地雷'],
 };
 const T = k => L(UI[k]);
 
@@ -332,6 +333,7 @@ const WPN = {
   fighterGun:{name:['Wing Guns','机翼武器'],  m:[['Twin Vickers','双联维克斯'],['Twin Vickers (SPAD)','双联维克斯'],['Twin Spandau','双联斯潘道']],                  proj:'bullet', dmg:16, rng:140, rof:.50, hits:'ga', vs:[.7,1],    acc:.66, supp:.28, ammo:36, burst:2 },
   attackGun:{ name:['Strafing Guns','扫射机炮'],m:[['Lewis Strafe','刘易斯扫射'],['Strafing Run','低空扫射'],['Trench Strafe','堑壕扫射']],                  proj:'bullet', dmg:28, rng:130, rof:.34, hits:'g',  vs:[1.5,1.1], acc:.62, supp:.66, ammo:48, burst:2 },
   agRocket: { name:['Air Rockets','对地火箭'],m:[['Cooper Bomb','库珀炸弹'],['Light Bomb','轻型炸弹'],['Air Grenade','空投手榴弹']],                              proj:'rocket', dmg:22, rng:170, rof:2.2, hits:'g',  vs:[.9,1.2],  splash:30, supp:.4, burst:4, ammo:6 },
+  railGun:  { name:['Siege Gun','攻城炮'],  m:[['14in Railway Gun','14 吋列车炮'],['320mm Railway Gun','320mm 列车炮'],['42cm Big Bertha','42cm 大贝尔莎']], proj:'bomb', dmg:120, rng:640, rof:11.0, hits:'g', vs:[1.4,1.5], splash:120, supp:1.4 },
   bombLoad: { name:['Bombs','航弹'],          m:[['112-lb Bomb','112 磅炸弹'],['Voisin Bomb','瓦赞炸弹'],['Zeppelin Bomb','飞艇炸弹']],                              proj:'drop',   dmg:56, rng:118,  rof:2.6, hits:'g',  vs:[1,1.2],   splash:70, supp:.7, burst:2, ammo:5 },
 };
 
@@ -351,6 +353,8 @@ const UNITS = {
   mlrs:  { name:['Rockets','火箭炮'],    sub:['6-round salvo','6发齐射'],        k:'0', m:[['Livens Projector','李文斯投射器'],['Mortar Battery','迫击炮群'],['Minenwerfer','重型迫击炮']],     bar:28, layer:'g', hp:92,  spd:7,  armor:1, h:18, w:['mlrsSalvo'],         weight:7 },
   supply:{ name:['Supply','补给车'],     sub:['Unsuppress + reload','解压制·快装填'], k:'u', m:[['Supply Limber','弹药车'],['Supply Wagon','补给马车'],['Feldwagen','野战补给车']],                   bar:19, layer:'g', hp:80,  spd:20, armor:1, h:16, w:[], hold:250, support:'supply', weight:8 },
   medic: { name:['Medic','卫生兵'],      sub:['Heals wounded','救治伤员'],       k:'i', m:[['Stretcher Bearer','担架兵'],['Brancardier','法军担架兵'],['Sanitäter','德军担架兵']],                       bar:25, layer:'g', hp:36,  spd:24, armor:0, h:22, w:[], hold:190, support:'medic',  weight:8 },
+  rail:  { name:['Railway Gun','列车炮'], sub:['Siege piece · reaches anywhere','攻城重炮·打遍全图'], k:'-', bar:34, m:[['Boche-Buster','博什粉碎者'],['Modèle 1917','1917 型列车炮'],['Dicke Bertha','大贝尔莎']], layer:'g', hp:190, spd:3, armor:1, h:20, w:['railGun'], hold:560, weight:3 },
+  balloon:{ name:['Balloon','观测气球'], sub:['Spots for the guns','为炮兵校射'], k:'=', bar:30, m:[['Drachen Balloon','龙式气球'],['Caquot Balloon','卡科气球'],['Drachen Balloon','龙式气球']], layer:'a', hp:60, spd:0, armor:0, h:16, w:[], alt:270, fuel:0, support:'spotter', weight:5 },
   /* Paratroopers drift down under canopy and only fight once they land. weight 0 keeps them
      out of the reinforcement pool, so they never just appear on the ground */
   para:  { name:['Paratrooper','伞兵'],  sub:['Airborne · elite','空降·精锐'],   k:'p', m:[['Trench Raiders','战壕突击队'],['Nettoyeurs','法军清扫队'],['Sturmtruppen','德军突击队']],              bar:27, layer:'g', hp:44,  spd:28, armor:0, h:24, w:['rifle','grenade'], aggr:1, weight:0 },
@@ -397,8 +401,8 @@ for (const k in UNITS) {
   d.aggr = !!d.aggr;                      // Explicit: only units whose main weapon is short-ranged push in
   if (d.layer === 'a' && !d.wing) d.wing = 'fixed';   // Only rotors may hover
 }
-const GROUND = ['inf','mg','sniper','atgm','tank','ifv','aa','sam','arty','mlrs','supply','medic','para'];
-const AIR = ['fig','atk','bmb'];
+const GROUND = ['inf','mg','sniper','atgm','tank','ifv','aa','sam','arty','mlrs','supply','medic','para','rail'];
+const AIR = ['fig','atk','bmb','balloon'];
 const ALL = GROUND.concat(AIR);
 /* Three WW2 nations, two of them per match. match[side] → index into NATIONS */
 const NATIONS = [
@@ -421,7 +425,7 @@ let units = [], projs = [], fx = [], wrecks = [], smokes = [], works = [];
 let uid = 1, lost = [0, 0];
 let running = true, speed = 1, autoRe = true, sound = true, showGrid = true;
 let curSide = 0, curTool = 'inf';
-let over = false, reTimer = 0, tick = 0, shake = 0;
+let over = false, reTimer = 0, tick = 0;
 let logs = [], lastFavored = -1;
 /* Target strength per side. 17 is the value where you can still tell who is shooting whom;
    ?units=40 and the like stage a mass engagement (screenshots, demos) */
@@ -731,7 +735,6 @@ function pushLog(txt) {
 /* ══════════════════════════ 战斗：主更新 ══════════════════════════ */
 function update(dt) {
   tick += dt;
-  shake = Math.max(0, shake - dt * 2.2);
   /* 弹坑随时间渐隐：每隔一会儿把整块伤痕层擦掉一点 alpha，
      老坑被擦的次数多、先淡去，新坑还清楚 */
   scarFade += dt;
@@ -746,6 +749,12 @@ function update(dt) {
     c.restore();
   }
   for (const id in cmdCd) if (cmdCd[id] > 0) cmdCd[id] = Math.max(0, cmdCd[id] - dt);
+  for (let i = shells.length - 1; i >= 0; i--) {     // 跟着模拟时钟的延迟队列
+    shells[i].t -= dt;
+    if (shells[i].t <= 0) { shells[i].fn(); shells.splice(i, 1); }
+  }
+  evTimer -= dt;                                     // 战场奇观：自己会来，不用你操作
+  if (evTimer <= 0) { evTimer = rnd(60, 105); runSpectacle(); }
 
   if (autoRe) {
     reTimer -= dt;
@@ -779,6 +788,7 @@ function update(dt) {
     }
   }
 
+  for (const u of units) u.spotted = 0;
   for (const u of units) {
     if (u.hp <= 0) continue;
     const air = u.d.layer === 'a';
@@ -835,7 +845,8 @@ function update(dt) {
     if (air) {
       /* ── 空中 ── */
       u.ph += dt;
-      if (!u.d.suicide) {
+      /* fuel 0 = 不吃油（系留气球这类），别把它判成"油尽返航"飘出地图 */
+      if (!u.d.suicide && u.d.fuel) {
         u.fuel -= dt;
         if (!u.rtb && (u.fuel <= 0 || outOfAmmo(u))) {
           u.rtb = 1;
@@ -985,8 +996,13 @@ function update(dt) {
       }
     }
 
+    /* ── 观测气球：拴在原地，给视野内的己方炮兵校射 ── */
+    if (u.d.support === 'spotter') {
+      for (const v of units)
+        if (v.side === u.side && v.hp > 0 && v.d.layer === 'g' && distG(u, v) < 420 * K) v.spotted = 1;
+    }
     /* ── 支援单位：补给车解压制+快装填，医疗兵治伤员 ── */
-    if (u.d.support) {
+    if (u.d.support && u.d.support !== 'spotter') {
       u.suppT = (u.suppT || 0) + dt;
       if (u.suppT > .5) {
         u.suppT = 0; u.link = null;
@@ -1078,10 +1094,8 @@ function update(dt) {
                     r: 36, t: -.16, dur: .46, sd: (Math.random() * 1e6) | 0 });
           fx.push({ k: 'debris', wx: u.wx, wz: u.wz, alt: u.alt, t: 0, dur: 1.25,
                     sd: (Math.random() * 1e6) | 0, n: 9 });
-          shake = Math.min(1, shake + .22);
         } else {
           boom(u.wx, u.wz, u.alt, 32);
-          if (u.d.armor) { scarCrater(u.wx, u.wz, 30); shake = Math.min(1, shake + .16); }
         }
         beep('boom');
         /* 战功记账：谁打死的，谁涨经验 */
@@ -1131,13 +1145,14 @@ function shoot(u, t, delay, d3, W) {
     if (t.d.spd > 40 * K) acc *= .82;
     /* 缠在一起互相机动规避，谁也不好瞄 —— 让狗斗多绞几个回合 */
     if (t.d.layer === 'a' && u.d.layer === 'a' && (d3 || 0) < 110 * K) acc *= .7;
+    if (u.spotted) acc *= 1.3;                      // 气球在天上给你校射
     if (u.sup > .3) acc *= 1 - u.sup * .35;         // 被压着打，手抖
     if (u.prone > .5) acc *= .82;
     if (t.cover) acc *= t.cover.kind === 'bunker' ? .52 : .72;   // 目标缩在工事里
     if (t.prone > .5) acc *= .78;                   // 趴着的人难打
     miss = Math.random() > clamp(acc, .08, .95);
   }
-  const scatter = splash ? splash * .4 * (.55 + .8 * far) : (k === 'bullet' ? 12 : 8);
+  const scatter = (splash ? splash * .4 * (.55 + .8 * far) : (k === 'bullet' ? 12 : 8)) * (u.spotted ? .6 : 1);
   let ex = t.wx + rnd(-scatter, scatter);
   let ez = t.wz + rnd(-scatter, scatter) / DEPTH;
   let ea = (t.alt || 0) + (t.d.layer === 'g' ? t.d.h * .5 : rnd(-8, 8));
@@ -1162,7 +1177,6 @@ function detonate(u) {
   const W = u.ws[0].d;
   hit({ ex: u.wx, ez: u.wz, ea: u.alt, dmg: W.dmg, vs: W.vs, splash: W.splash,
         supp: W.supp, side: u.side, sd: u.sd, miss: 0, owner: null });
-  shake = Math.min(1, shake + .4);
 }
 /* 造成伤害：装甲面前轻武器会跳弹（期望伤害不变，但看着有戏） */
 function applyDamage(p, v) {
@@ -1199,7 +1213,6 @@ function hit(p) {
     }
     suppress(p.ex, p.ez, r * 1.8, p.supp || .3, p.side);
     beep('boom');
-    if (r > 60 * K) shake = Math.min(1, shake + .12);
     return;
   }
   suppress(p.ex, p.ez, 62 * K, p.supp || .1, p.side);     // 子弹擦身而过也压人
@@ -1222,6 +1235,7 @@ const CMDS = [
   { id:'reinf',   name:['Reinforce','增援'], tip:['Commit a batch of units from the rear immediately','后方立刻投入一批部队'],                   cd:16, aim:0 },
   { id:'rally',   name:['Rally','鼓舞'],     tip:['Clears suppression, +speed and rate of fire for 7s','解除压制，全员提速抢攻 7 秒'],           cd:30, aim:1 },
   { id:'smoke',   name:['Gas','毒气'],       tip:['A drifting gas cloud: keeps hurting and pinning anyone caught in it','飘散的毒气云：持续伤害并压制云里的一切'], cd:22, aim:1 },
+  { id:'mine',    name:['Mine','坑道爆破'], tip:['Sappers have been digging for weeks. Fires after a delay, and leaves a hole in the map','工兵挖了几周的坑道，延迟起爆，地图上会留个大坑'], cd:70, aim:1 },
   { id:'airdrop', name:['Raid','突击队'],    tip:['A raiding party goes over the top into the target trench','一队突击兵越出战壕，摸进指定阵地'], cd:34, aim:1 },
 ];
 const cmdCd = {};
@@ -1269,6 +1283,16 @@ function execCmd(id, wx, wz) {
     }
     fx.push({ k: 'rally', wx, wz, alt: 0, t: 0, dur: 1.1, sd: (Math.random() * 1e6) | 0, side });
     pushLog(sideName(side) + T('lgRally') + n + T('lgUnits'));
+  } else if (id === 'mine') {
+    /* Messines-style mine: warning first, then the ground goes up */
+    fx.push({ k: 'minewarn', wx, wz, alt: 0, t: 0, dur: 3.4, sd: (Math.random() * 1e6) | 0, side });
+    projs.push({
+      kind: 'bomb', side, dmg: 280, vs: [1.5, 1.6], splash: 200 * K, supp: 2.4, owner: null,
+      sx: wx, sz: wz, sa: 2, ex: wx, ez: wz, ea: 0, wx, wz, alt: 2,
+      t: 0, pt: 0, delay: 3.4, life: 18, col: sideCol(side),
+      sd: (Math.random() * 1e6) | 0, miss: 0, dur: .12, arc: 0, trail: null,
+    });
+    pushLog(sideName(side) + T('lgMine'));
   } else if (id === 'airdrop') {
     for (let i = 0; i < 5; i++) {
       spawn(side, 'para', wx + (i - 2) * 34 * K + rnd(-12, 12), wz + rnd(-.06, .06));
@@ -1285,6 +1309,66 @@ function execCmd(id, wx, wz) {
   }
   cmdCd[id] = CMDS.find(c => c.id === id).cd;
 }
+
+
+/* ══════════════════════════ SPECTACLES ══════════════════════════
+   Occasional set-pieces that fire on their own — no order, no cooldown button.
+   Each belongs to one nation, so you only see it when that nation is in the match. */
+let evTimer = rnd(40, 75);
+function farSide(side) { return side === 0 ? rnd(WORLD_W * .52, WORLD_W - 70) : rnd(70, WORLD_W * .48); }
+/* Aim a set-piece at where the enemy actually is — a random patch of empty
+   field makes for an expensive fireworks display and nothing else */
+function enemyCentre(side) {
+  let n = 0, sx = 0, sz = 0;
+  for (const u of units)
+    if (u.side !== side && u.hp > 0 && u.d.layer === 'g') { sx += u.wx; sz += u.wz; n++; }
+  return n ? [sx / n, sz / n] : [farSide(side), .5];
+}
+/* Something arriving straight down out of the sky */
+function skyFall(side, wx, wz, dmg, splash, dur, alt) {
+  projs.push({
+    kind: 'rocket', side, dmg, vs: [1.5, 1.6], splash: splash * K, supp: 2.2, owner: null,
+    sx: wx, sz: wz, sa: alt, ex: wx, ez: wz, ea: 0, wx, wz, alt,
+    t: 0, pt: 0, delay: 0, life: 14, col: sideCol(side),
+    sd: (Math.random() * 1e6) | 0, miss: 0, dur, arc: 0, trail: [],
+  });
+}
+/* 简易延迟：把回调挂进特效队列，跟着模拟时钟走（不用真实计时器） */
+const shells = [];
+function setTimeoutShell(delay, fn) { shells.push({ t: delay, fn }); }
+function runSpectacle() {
+  const pool = SPECTACLE.filter(e => e.nat === match[0] || e.nat === match[1]);
+  if (!pool.length) return;
+  const e = pick(pool);
+  const side = e.nat === match[0] ? 0 : 1;
+  e.go(side);
+  pushLog('⚑ ' + sideName(side) + ' — ' + L(e.name));
+}
+
+const SPECTACLE = [
+  { nat: 2, name: ['Zeppelin raid', '齐柏林夜袭'], go(side) {
+      for (let i = 0; i < 2; i++) {
+        const u = spawn(side, 'bmb', side === 0 ? -40 - i * 60 : WORLD_W + 40 + i * 60, rnd(.2, .8));
+        u.rank = 1;
+      }
+    } },
+  { nat: 2, name: ['Paris Gun', '巴黎大炮'], go(side) {
+      const wz = rnd(.12, .88);
+      for (let i = 0; i < 3; i++)
+        setTimeoutShell(i * .9, () => { const c = enemyCentre(side);
+          skyFall(side, c[0] + rnd(-130, 130), c[1] + rnd(-100, 100) / DEPTH, 190, 150, 1.7, 820); });
+    } },
+  { nat: 0, name: ['Railway gun barrage', '列车炮弹幕'], go(side) {
+      const c = enemyCentre(side);
+      for (let i = 0; i < 7; i++)
+        ordnance(side, c[0] + (i - 3) * 40 * K + rnd(-16, 16), c[1] + rnd(-90, 90) / DEPTH, .4 + i * .5, 110, 120, 1.1);
+    } },
+  { nat: 1, name: ['French 75 rafale', '法国 75 速射'], go(side) {
+      const c = enemyCentre(side);
+      for (let i = 0; i < 16; i++)
+        ordnance(side, c[0] + rnd(-110, 110), c[1] + rnd(-110, 110) / DEPTH, i * .18, 34, 46, .5);
+    } },
+];
 
 /* ══════════════════════════ 画兵 ══════════════════════════ */
 const bob = u => (u.prone > .5 ? 0 : Math.sin(tick * 6 + u.ph) * 1.2);
@@ -1527,6 +1611,43 @@ const DRAW = {
     }
     if (u.flash > .6) rline(2 + Math.cos(el) * 15, y - 8 - Math.sin(el) * 15,
                             2 + Math.cos(el) * 27, y - 8 - Math.sin(el) * 27, 5);
+  },
+  /* Railway gun: a gun too big for wheels, so it rides on rails */
+  rail(u, n) {
+    const y = -8, el = Math.max(.35, u.aimEl);
+    ctx.lineWidth *= .8;                                            // rails and sleepers
+    rline(-30, y + 9, 30, y + 9); rline(-30, y + 11, 30, y + 11);
+    for (let i = 0; i < 9; i++) rline(-28 + i * 7, y + 8, -28 + i * 7, y + 12, 1);
+    ctx.lineWidth /= .8;
+    rpoly([[-24, y + 8], [-24, y], [20, y], [22, y + 8]], true);     // carriage
+    if (n === 2) sh(-22, y, 42, 8, 10);
+    for (let i = 0; i < 6; i++) rcirc(-20 + i * 7, y + 8, 2.6);      // bogies
+    rpoly([[-8, y], [-6, y - 9], [6, y - 9], [8, y]], true);         // mount
+    ctx.lineWidth *= 2.6;
+    const e = barrel(2, y - 7, n === 2 ? 34 : 30, el, u.face);       // the barrel is the point
+    ctx.lineWidth /= 2.6;
+    rline(-6, y - 6, -14, y - 1);                                    // recoil spade
+    mark(-16, y + 4, 2.6, n);
+    if (u.flash > .4) {
+      rcirc(e[0] + Math.cos(el) * 8, e[1] - Math.sin(el) * 8, 9, 5);
+      ctx.lineWidth *= 2;
+      rline(e[0], e[1], e[0] + Math.cos(el) * 18, e[1] - Math.sin(el) * 18, 3);
+      ctx.lineWidth /= 2;
+    }
+  },
+  /* Observation balloon: tethered, unarmed, and the reason the guns hit anything */
+  balloon(u, n) {
+    const w = 15, h = 10;
+    rpoly([[-w, 0], [-w * .6, -h], [w * .5, -h], [w, -h * .2], [w * .6, h * .8], [-w * .6, h]], true);
+    ctx.lineWidth *= .8;
+    rline(-w * .6, -h * .7, -w * .6, h * .8); rline(2, -h * .9, 2, h * .6);   // seams
+    ctx.lineWidth /= .8;
+    rpoly([[w * .6, -h * .3], [w * 1.3, -h * .8], [w * 1.25, -h * .1]], true); // tail lobes
+    rpoly([[w * .6, h * .2], [w * 1.3, h * .7], [w * 1.25, h * .05]], true);
+    rline(-4, h, -3, h + 7); rline(3, h * .9, 3, h + 7);                       // rigging
+    rpoly([[-5, h + 7], [4, h + 7], [4, h + 11], [-5, h + 11]], true);         // basket
+    rcirc(-1, h + 5, 1.8);                                                     // observer
+    mark(-3, -h * .3, 2.6, n);
   },
   supply(u, n) {
     const y = -5;
@@ -1873,6 +1994,16 @@ function drawFx(f) {
     ctx.strokeStyle = '#9c9484'; ctx.lineWidth = Math.max(1, 1.5 * sc);
     for (let i = 0; i < 3; i++)
       rline(q[0] - 11 * sc, q[1] - i * 2.2 * sc, q[0] + 12 * sc, q[1] - i * 2.8 * sc, 2.6);
+  } else if (f.k === 'minewarn') {
+    /* The ground shivers where the sappers have been */
+    ctx.strokeStyle = '#8a5a2a'; ctx.lineWidth = Math.max(1.2, 1.8 * sc);
+    ctx.globalAlpha = .3 + Math.abs(Math.sin(f.t * 9)) * .45;
+    rcirc(q[0], q[1], (26 + k * 22) * sc, 3.4);
+    for (let i = 0; i < 6; i++) {
+      const a = sr() * 6.3;
+      rline(q[0] + Math.cos(a) * 9 * sc, q[1] + Math.sin(a) * 5 * sc,
+            q[0] + Math.cos(a) * 28 * sc, q[1] + Math.sin(a) * 15 * sc, 2.4);
+    }
   } else if (f.k === 'spark') {
     ctx.strokeStyle = '#3b3a36'; ctx.lineWidth = Math.max(1, 1.5 * sc);
     for (let i = 0; i < 5; i++) {
@@ -2060,7 +2191,6 @@ function drawTip(u) {
 const zbuf = [];
 function render() {
   mainCtx.save();
-  if (shake > .01) mainCtx.translate((Math.random() - .5) * shake * 9, (Math.random() - .5) * shake * 6);
   drawPaper();
   for (const w of works) drawWork(w);
   zbuf.length = 0;

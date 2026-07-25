@@ -49,6 +49,11 @@ A single HTML file. No build step, no dependencies, no network calls — open it
   turning fight because a missile has a minimum range.
 - **Suppression drives the infantry fight.** Fire landing nearby pins men down whether or not it
   hits; pinned infantry crawl for the nearest trench or bunker and stop advancing.
+- **Set-pieces arrive on their own.** Every minute or so something outsized turns up without you
+  asking: a V-2 that simply lands with no warning and nothing that can intercept it, a V-1 slow
+  enough for the flak to get a shot at, a B-17 formation, a Katyusha battalion. 1916 gets its own —
+  Zeppelin raids, the Paris Gun, railway-gun barrages. Each belongs to one nation, so you only see
+  it when that nation is in the match.
 - **Six commander orders** on cooldowns — air strike, barrage, reinforce, rally, smoke, airdrop —
   so you can lean on the battle without micromanaging it.
 

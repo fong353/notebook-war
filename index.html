@@ -332,6 +332,8 @@ const WPN = {
   fighterGun:{name:['Wing Guns','机翼武器'],  m:[['MG151/20','MG151/20'],['6× M2 .50 cal','6×M2 .50'],['ShVAK 20mm','ShVAK 20mm']],                  proj:'bullet', dmg:16, rng:140, rof:.50, hits:'ga', vs:[.7,1],    acc:.66, supp:.28, ammo:36, burst:2 },
   attackGun:{ name:['Strafing Guns','扫射机炮'],m:[['MG17 + 37mm','MG17 + 37mm'],['8× M2 .50 cal','8×M2 .50'],['VYa-23','VYa-23']],                  proj:'bullet', dmg:28, rng:130, rof:.34, hits:'g',  vs:[1.5,1.1], acc:.62, supp:.66, ammo:48, burst:2 },
   agRocket: { name:['Air Rockets','对地火箭'],m:[['Wfr.Gr.21','Wfr.Gr.21'],['HVAR 5in','HVAR 5 吋'],['RS-82','RS-82']],                              proj:'rocket', dmg:22, rng:170, rof:2.2, hits:'g',  vs:[.9,1.2],  splash:30, supp:.4, burst:4, ammo:6 },
+  railGun:  { name:['Siege Gun','攻城炮'],  m:[['80cm Gustav Shell','80cm 古斯塔夫炮弹'],['240mm M1 Shell','240mm M1 炮弹'],['203mm B-4 Shell','203mm B-4 炮弹']], proj:'bomb', dmg:130, rng:640, rof:11.0, hits:'g', vs:[1.4,1.5], splash:125, supp:1.4 },
+  v1Warhead:{ name:['Warhead','战斗部'], m:[['V-1 Warhead','V-1 战斗部'],['Warhead','战斗部'],['Warhead','战斗部']], proj:'ram', dmg:210, rng:22, rof:9, hits:'g', vs:[1.4,1.5], splash:150, supp:1.6 },
   bombLoad: { name:['Bombs','航弹'],          m:[['SC 250','SC 250'],['M64 500lb','M64 500 磅'],['FAB-100','FAB-100']],                              proj:'drop',   dmg:56, rng:118,  rof:2.6, hits:'g',  vs:[1,1.2],   splash:70, supp:.7, burst:2, ammo:5 },
 };
 
@@ -351,10 +353,12 @@ const UNITS = {
   mlrs:  { name:['Rockets','火箭炮'],    sub:['6-round salvo','6发齐射'],        k:'0', m:[['Nebelwerfer 41','烟雾发射器 41'],['T34 Calliope','T34 卡利俄佩'],['BM-13 Katyusha','BM-13 喀秋莎']],     bar:28, layer:'g', hp:92,  spd:7,  armor:1, h:18, w:['mlrsSalvo'],         weight:7 },
   supply:{ name:['Supply','补给车'],     sub:['Unsuppress + reload','解压制·快装填'], k:'u', m:[['Opel Blitz','欧宝闪电'],['GMC CCKW','GMC CCKW'],['ZiS-5 Supply','ZiS-5 补给车']],                   bar:19, layer:'g', hp:80,  spd:20, armor:1, h:16, w:[], hold:250, support:'supply', weight:8 },
   medic: { name:['Medic','卫生兵'],      sub:['Heals wounded','救治伤员'],       k:'i', m:[['Sanitäter','德军卫生兵'],['US Medic','美军医护兵'],['Saninstruktor','卫生指导员']],                       bar:25, layer:'g', hp:36,  spd:24, armor:0, h:22, w:[], hold:190, support:'medic',  weight:8 },
+  rail:  { name:['Railway Gun','列车炮'], sub:['Siege piece · reaches anywhere','攻城重炮·打遍全图'], k:'-', bar:34, m:[['80cm Schwerer Gustav','80cm 古斯塔夫'],['240mm M1 Black Dragon','240mm 黑龙'],['203mm B-4','203mm B-4']], layer:'g', hp:190, spd:3, armor:1, h:20, w:['railGun'], hold:560, weight:3 },
   /* Paratroopers drift down under canopy and only fight once they land. weight 0 keeps them
      out of the reinforcement pool, so they never just appear on the ground */
   para:  { name:['Paratrooper','伞兵'],  sub:['Airborne · elite','空降·精锐'],   k:'p', m:[['Fallschirmjäger','德军伞兵'],['82nd Airborne','82 空降师'],['VDV Airborne','苏军空降兵']],              bar:27, layer:'g', hp:44,  spd:28, armor:0, h:24, w:['rifle','grenade'], aggr:1, weight:0 },
 
+  v1:    { name:['V-1','V-1 飞弹'], sub:['One-way · can be shot down','一次性·可被击落'], k:'\\', bar:12, m:[['V-1 Flying Bomb','V-1 飞弹'],['V-1','V-1'],['V-1','V-1']], layer:'a', hp:40, spd:62, armor:0, h:8, w:['v1Warhead'], alt:150, fuel:0, suicide:1, weight:0 },
   fig:   { name:['Fighter','战斗机'],    sub:['Guns · dogfight','机枪·缠斗'],    k:'q', m:[['Bf 109G','Bf 109G'],['P-51D Mustang','P-51D 野马'],['Yak-3','Yak-3']],                                   bar:15, layer:'a', hp:72,  spd:66, armor:1, h:12, w:['fighterGun'],        alt:250, fuel:55, weight:13 },
   atk:   { name:['Dive Bomber','俯冲轰炸'],sub:['Strafe + rockets','扫射+火箭'], k:'w', m:[['Ju 87 Stuka','Ju 87 斯图卡'],['P-47D Thunderbolt','P-47D 雷电'],['Il-2 Sturmovik','Il-2 施图莫维克']],   bar:17, layer:'a', hp:118, spd:46, armor:1, h:14, w:['attackGun','agRocket'], alt:95, fuel:50, weight:12 },
   bmb:   { name:['Bomber','轰炸机'],     sub:['Carpet bombing','地毯轰炸'],      k:'r', m:[['He 111','He 111'],['B-17G Flying Fortress','B-17G 空中堡垒'],['Pe-2','Pe-2']],                           bar:19, layer:'a', hp:155, spd:36, armor:1, h:16, w:['bombLoad'],          alt:175, fuel:52, weight:9 },
@@ -397,8 +401,8 @@ for (const k in UNITS) {
   d.aggr = !!d.aggr;                      // Explicit: only units whose main weapon is short-ranged push in
   if (d.layer === 'a' && !d.wing) d.wing = 'fixed';   // Only rotors may hover
 }
-const GROUND = ['inf','mg','sniper','atgm','tank','ifv','aa','sam','arty','mlrs','supply','medic','para'];
-const AIR = ['fig','atk','bmb'];
+const GROUND = ['inf','mg','sniper','atgm','tank','ifv','aa','sam','arty','mlrs','supply','medic','para','rail'];
+const AIR = ['fig','atk','bmb','v1'];
 const ALL = GROUND.concat(AIR);
 /* Three WW2 nations, two of them per match. match[side] → index into NATIONS */
 const NATIONS = [
@@ -421,7 +425,7 @@ let units = [], projs = [], fx = [], wrecks = [], smokes = [], works = [];
 let uid = 1, lost = [0, 0];
 let running = true, speed = 1, autoRe = true, sound = true, showGrid = true;
 let curSide = 0, curTool = 'inf';
-let over = false, reTimer = 0, tick = 0, shake = 0;
+let over = false, reTimer = 0, tick = 0;
 let logs = [], lastFavored = -1;
 /* Target strength per side. 17 is the value where you can still tell who is shooting whom;
    ?units=40 and the like stage a mass engagement (screenshots, demos) */
@@ -722,7 +726,6 @@ function pushLog(txt) {
 /* ══════════════════════════ 战斗：主更新 ══════════════════════════ */
 function update(dt) {
   tick += dt;
-  shake = Math.max(0, shake - dt * 2.2);
   /* 弹坑随时间渐隐：每隔一会儿把整块伤痕层擦掉一点 alpha，
      老坑被擦的次数多、先淡去，新坑还清楚 */
   scarFade += dt;
@@ -737,6 +740,8 @@ function update(dt) {
     c.restore();
   }
   for (const id in cmdCd) if (cmdCd[id] > 0) cmdCd[id] = Math.max(0, cmdCd[id] - dt);
+  evTimer -= dt;                                     // 战场奇观：自己会来，不用你操作
+  if (evTimer <= 0) { evTimer = rnd(60, 105); runSpectacle(); }
 
   if (autoRe) {
     reTimer -= dt;
@@ -825,7 +830,8 @@ function update(dt) {
     if (air) {
       /* ── 空中 ── */
       u.ph += dt;
-      if (!u.d.suicide) {
+      /* fuel 0 = 不吃油（系留气球这类），别把它判成"油尽返航"飘出地图 */
+      if (!u.d.suicide && u.d.fuel) {
         u.fuel -= dt;
         if (!u.rtb && (u.fuel <= 0 || outOfAmmo(u))) {
           u.rtb = 1;
@@ -1056,10 +1062,8 @@ function update(dt) {
                     r: 36, t: -.16, dur: .46, sd: (Math.random() * 1e6) | 0 });
           fx.push({ k: 'debris', wx: u.wx, wz: u.wz, alt: u.alt, t: 0, dur: 1.25,
                     sd: (Math.random() * 1e6) | 0, n: 9 });
-          shake = Math.min(1, shake + .22);
         } else {
           boom(u.wx, u.wz, u.alt, 32);
-          if (u.d.armor) { scarCrater(u.wx, u.wz, 30); shake = Math.min(1, shake + .16); }
         }
         beep('boom');
         /* 战功记账：谁打死的，谁涨经验 */
@@ -1140,7 +1144,6 @@ function detonate(u) {
   const W = u.ws[0].d;
   hit({ ex: u.wx, ez: u.wz, ea: u.alt, dmg: W.dmg, vs: W.vs, splash: W.splash,
         supp: W.supp, side: u.side, sd: u.sd, miss: 0, owner: null });
-  shake = Math.min(1, shake + .4);
 }
 /* 造成伤害：装甲面前轻武器会跳弹（期望伤害不变，但看着有戏） */
 function applyDamage(p, v) {
@@ -1177,7 +1180,6 @@ function hit(p) {
     }
     suppress(p.ex, p.ez, r * 1.8, p.supp || .3, p.side);
     beep('boom');
-    if (r > 60 * K) shake = Math.min(1, shake + .12);
     return;
   }
   suppress(p.ex, p.ez, 62 * K, p.supp || .1, p.side);     // 子弹擦身而过也压人
@@ -1258,6 +1260,63 @@ function execCmd(id, wx, wz) {
   }
   cmdCd[id] = CMDS.find(c => c.id === id).cd;
 }
+
+
+/* ══════════════════════════ SPECTACLES ══════════════════════════
+   Occasional set-pieces that fire on their own — no order, no cooldown button.
+   Each belongs to one nation, so you only see it when that nation is in the match. */
+let evTimer = rnd(40, 75);
+function farSide(side) { return side === 0 ? rnd(WORLD_W * .52, WORLD_W - 70) : rnd(70, WORLD_W * .48); }
+/* Aim a set-piece at where the enemy actually is — a random patch of empty
+   field makes for an expensive fireworks display and nothing else */
+function enemyCentre(side) {
+  let n = 0, sx = 0, sz = 0;
+  for (const u of units)
+    if (u.side !== side && u.hp > 0 && u.d.layer === 'g') { sx += u.wx; sz += u.wz; n++; }
+  return n ? [sx / n, sz / n] : [farSide(side), .5];
+}
+/* Something arriving straight down out of the sky */
+function skyFall(side, wx, wz, dmg, splash, dur, alt) {
+  projs.push({
+    kind: 'rocket', side, dmg, vs: [1.5, 1.6], splash: splash * K, supp: 2.2, owner: null,
+    sx: wx, sz: wz, sa: alt, ex: wx, ez: wz, ea: 0, wx, wz, alt,
+    t: 0, pt: 0, delay: 0, life: 14, col: sideCol(side),
+    sd: (Math.random() * 1e6) | 0, miss: 0, dur, arc: 0, trail: [],
+  });
+}
+function runSpectacle() {
+  const pool = SPECTACLE.filter(e => e.nat === match[0] || e.nat === match[1]);
+  if (!pool.length) return;
+  const e = pick(pool);
+  const side = e.nat === match[0] ? 0 : 1;
+  e.go(side);
+  pushLog('⚑ ' + sideName(side) + ' — ' + L(e.name));
+}
+
+const SPECTACLE = [
+  { nat: 0, name: ['V-2 rocket', 'V-2 火箭'], go(side) {
+      /* Supersonic — no warning, nothing can intercept it. It simply arrives. */
+      skyFall(side, farSide(side), rnd(.1, .9), 320, 200, 1.4, 900);
+    } },
+  { nat: 0, name: ['V-1 flying bomb', 'V-1 飞弹'], go(side) {
+      /* Slow and low, unlike the V-2 — flak actually gets a shot at this one */
+      for (let i = 0; i < 2; i++) {
+        const u = spawn(side, 'v1', side === 0 ? -30 - i * 70 : WORLD_W + 30 + i * 70, rnd(.2, .8));
+        u.alt = 150;
+      }
+    } },
+  { nat: 1, name: ['B-17 formation', 'B-17 编队'], go(side) {
+      for (let i = 0; i < 4; i++) {
+        const u = spawn(side, 'bmb', side === 0 ? -40 - i * 55 : WORLD_W + 40 + i * 55, .25 + i * .17);
+        u.rank = 1;
+      }
+    } },
+  { nat: 2, name: ['Katyusha battalion', '喀秋莎全营齐射'], go(side) {
+      const c = enemyCentre(side);
+      for (let i = 0; i < 26; i++)
+        ordnance(side, c[0] + rnd(-140, 140), c[1] + rnd(-140, 140) / DEPTH, rnd(0, 2.2), 30, 44, .6);
+    } },
+];
 
 /* ══════════════════════════ 画兵 ══════════════════════════ */
 const bob = u => (u.prone > .5 ? 0 : Math.sin(tick * 6 + u.ph) * 1.2);
@@ -1480,6 +1539,29 @@ const DRAW = {
     if (u.flash > .6) rline(2 + Math.cos(el) * 15, y - 8 - Math.sin(el) * 15,
                             2 + Math.cos(el) * 27, y - 8 - Math.sin(el) * 27, 5);
   },
+  /* Railway gun: a gun too big for wheels, so it rides on rails */
+  rail(u, n) {
+    const y = -8, el = Math.max(.35, u.aimEl);
+    ctx.lineWidth *= .8;                                            // rails and sleepers
+    rline(-30, y + 9, 30, y + 9); rline(-30, y + 11, 30, y + 11);
+    for (let i = 0; i < 9; i++) rline(-28 + i * 7, y + 8, -28 + i * 7, y + 12, 1);
+    ctx.lineWidth /= .8;
+    rpoly([[-24, y + 8], [-24, y], [20, y], [22, y + 8]], true);     // carriage
+    if (n === 2) sh(-22, y, 42, 8, 10);
+    for (let i = 0; i < 6; i++) rcirc(-20 + i * 7, y + 8, 2.6);      // bogies
+    rpoly([[-8, y], [-6, y - 9], [6, y - 9], [8, y]], true);         // mount
+    ctx.lineWidth *= 2.6;
+    const e = barrel(2, y - 7, n === 2 ? 34 : 30, el, u.face);       // the barrel is the point
+    ctx.lineWidth /= 2.6;
+    rline(-6, y - 6, -14, y - 1);                                    // recoil spade
+    mark(-16, y + 4, 2.6, n);
+    if (u.flash > .4) {
+      rcirc(e[0] + Math.cos(el) * 8, e[1] - Math.sin(el) * 8, 9, 5);
+      ctx.lineWidth *= 2;
+      rline(e[0], e[1], e[0] + Math.cos(el) * 18, e[1] - Math.sin(el) * 18, 3);
+      ctx.lineWidth /= 2;
+    }
+  },
   supply(u, n) {
     const y = -5;
     rpoly([[-13, y], [-14, y - 6], [-7, y - 6], [-6, y]], true);
@@ -1504,6 +1586,16 @@ const DRAW = {
     ctx.lineWidth /= .9;
   },
   /* ── 战斗机：Bf109 方翼尖 / P-51 气泡舱层流翼 / Yak-3 短粗 ── */
+  /* V-1: stubby airframe with the pulsejet tube riding on its back */
+  v1(u, n) {
+    rpoly([[-11, 0], [-7, -3], [8, -3], [13, 0], [8, 3], [-7, 3]], true);
+    rline(-1, -3, -8, -8); rline(-1, 3, -8, 8);                       // stub wings
+    rline(-11, -1, -15, -6); rline(-11, 1, -15, 5);
+    rpoly([[-9, -4], [2, -4], [2, -8], [-9, -8]], true);              // pulsejet
+    ctx.strokeStyle = '#8d8778';
+    const f = 5 + Math.abs(rotor(u)) * 6;
+    rline(-9, -6, -9 - f, -6 + rnd(-1.2, 1.2), 3);
+  },
   fig(u, n) {
     if (n === 0) {
       rpoly([[-15, 0], [-7, -4], [9, -4], [16, -1], [10, 3], [-9, 3]], true);
@@ -1967,7 +2059,6 @@ function drawTip(u) {
 const zbuf = [];
 function render() {
   mainCtx.save();
-  if (shake > .01) mainCtx.translate((Math.random() - .5) * shake * 9, (Math.random() - .5) * shake * 6);
   drawPaper();
   for (const w of works) drawWork(w);
   zbuf.length = 0;
