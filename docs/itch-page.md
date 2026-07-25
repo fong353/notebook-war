@@ -6,7 +6,7 @@
 2. **Title**：`Notebook War`
 3. **Short description**（下面那栏，限 ~140 字）：见本文「Tagline」
 4. **Classification**：`Games` → **Kind of project**：`HTML`
-5. **Upload files** → 选 `notebook-war-itch.zip`（项目根目录下，206 KB）
+5. **Upload files** → 选 `notebook-war-itch.zip`（项目根目录下，69 KB）
    上传完勾选它下面的 **"This file will be played in the browser"**
 6. **Embed options**：
    - Viewport dimensions：`1280` × `720`（已按这个尺寸验证过界面不裁切）
