@@ -5,6 +5,7 @@
 [English](README.md) · **中文**
 
 **[▶ 在浏览器里玩](https://fong353.github.io/notebook-war/?lang=zh)**
+ · [一战版](https://fong353.github.io/notebook-war/ww1.html?lang=zh)
  · [冷战版](https://fong353.github.io/notebook-war/cold-war.html?lang=zh)
  · [星战版](https://fong353.github.io/notebook-war/starwars.html?lang=zh)
 
@@ -26,7 +27,10 @@
 
 一个 HTML 文件。没有构建步骤、没有依赖、不发任何网络请求——打开就能跑。
 
-- **三套设定。** `index.html` 是 1944：德军、美军、苏军，任选两家对打。
+- **四套设定。** `ww1.html` 是 1916——英军、法军、德军，也是工事系统真正当主角的那一套：
+  铁丝网把步兵挂住、坦克照压过去；毒气云会飘、会持续伤人；徐进弹幕一排排向前推；
+  菱形的 Mk.IV、福克三翼机，还有天上的齐柏林飞艇。
+  `index.html` 是 1944：德军、美军、苏军，任选两家对打。
   `cold-war.html` 是美苏对抗，有直升机、无人机和巡航导弹。
   `starwars.html` 是银河帝国 / 义军同盟 / 银河共和国——坦克换成步行机，
   AT-AT 迈着四条分节长腿走过来，钛战机顶着两片六边形板悬在头上。
@@ -55,6 +59,8 @@
   `?units=38` 把每方编制从默认 17 提到 38，配宽屏摆大军；`?lang=en` 指定语言。
 
 ![冷战版](docs/coldwar.png)
+
+![一战版](docs/ww1.png)
 
 ![星战版](docs/galactic.png)
 

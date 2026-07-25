@@ -5,6 +5,7 @@
 **English** · [中文](README.zh-CN.md)
 
 **[▶ Play it in your browser](https://fong353.github.io/notebook-war/)**
+ · [1916](https://fong353.github.io/notebook-war/ww1.html)
  · [Cold War](https://fong353.github.io/notebook-war/cold-war.html)
  · [Galactic](https://fong353.github.io/notebook-war/starwars.html)
 
@@ -30,7 +31,11 @@ bombers that have to fly a real attack run instead of hovering over the target.
 
 A single HTML file. No build step, no dependencies, no network calls — open it and it runs.
 
-- **Three settings.** `index.html` is 1944: Wehrmacht, US Army and Red Army, pick any two to fight.
+- **Four settings.** `ww1.html` is 1916 — British, French and German, and the one where the trench
+  system finally matters: barbed wire that snags infantry while tanks flatten it, drifting gas that
+  keeps hurting whoever is caught in it, a creeping barrage that walks forward a rank at a time,
+  rhomboid Mark IVs, a Fokker triplane and a Zeppelin overhead.
+  `index.html` is 1944: Wehrmacht, US Army and Red Army, pick any two to fight.
   `cold-war.html` is US vs USSR, with helicopters, drones and cruise missiles.
   `starwars.html` is Empire / Rebels / Republic — walkers instead of tanks, so an AT-AT strides in
   on four jointed legs while a TIE fighter holds its hex panels overhead.
@@ -63,6 +68,8 @@ it needs no server, no build step and makes no network calls.
 - Works on phones — there's a **Rotate** button, because a battlefield wants to be wide.
 
 ![Cold War](docs/coldwar.png)
+
+![1916](docs/ww1.png)
 
 ![Galactic](docs/galactic.png)
 
