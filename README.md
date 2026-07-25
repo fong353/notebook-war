@@ -74,6 +74,8 @@ it needs no server, no build step and makes no network calls.
 - Drag on the field to draw units. Click an order, then click the field to aim it.
 - Hover any unit to see its designation, weapons, remaining ammo and current state.
 - `Space` pauses, number/letter keys pick a unit type, `Tab` switches which side your pen belongs to.
+- **Scroll to zoom, drag with the middle button to pan** — useful for watching a single skirmish up
+  close. It is a pure screen-space transform, so nothing about the battle changes while you look.
 - Works on phones — there's a **Rotate** button, because a battlefield wants to be wide.
 
 ![Cold War](docs/coldwar.png)

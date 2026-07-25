@@ -40,6 +40,15 @@
   #wrap{flex:1 1 auto;position:relative;min-height:0}
   canvas{display:block;width:100%;height:100%;cursor:crosshair;touch-action:none}
   body.aiming canvas{cursor:cell}
+  body.panning canvas{cursor:grabbing}
+  #zoom{
+    position:absolute;right:10px;top:8px;display:none;gap:5px;align-items:center;
+    background:rgba(239,233,216,.86);border:1.5px solid #a9a08a;border-radius:13px 9px 12px 10px;
+    padding:2px 4px 2px 9px;font-size:12px;color:var(--ink);
+  }
+  #zoom.on{display:flex}
+  #zoom b{font-weight:600;letter-spacing:.3px}
+  #zoom button{padding:1px 7px;font-size:12px}
   #hud{
     flex:0 0 auto;background:var(--paper);border-top:2px dashed #c9bfa6;
     padding:4px 8px 6px;display:flex;flex-wrap:wrap;gap:5px;align-items:center;
@@ -118,6 +127,7 @@
 
 <div id="wrap">
   <canvas id="c"></canvas>
+  <div id="zoom"><b id="zlvl">×1.0</b><button id="zfit" title="Reset view">1:1</button></div>
   <div id="banner"><span id="bantext"></span></div>
   <div id="log"></div>
   <div id="hint">Drag to draw units　·　Click an order, then click the field　·　Space to pause</div>
@@ -298,7 +308,31 @@ function layout() {
   const m = Math.min(W, H * 2.4);
   SIZEK = m < 520 ? .92 : (m < 760 ? 1.18 : (m < 1100 ? 1.44 : 1.66));
   paper = null; scars = null;
+  if (typeof view !== 'undefined') clampView();
 }
+
+/* ══════════════════════════ 视图：滚轮缩放 / 中键拖动 ══════════════════════════
+   纯屏幕空间的变换 —— 世界坐标、透视、模拟逻辑一概不碰。放大只是把画好的
+   这张纸凑近了看，所以战局不会因为你在看哪儿而有任何不同。
+   钳制保证画面永远铺满：缩放下限是 1，平移不许把纸拖出边框露白。 */
+const view = { k: 1, x: 0, y: 0 }, VIEW_MAX = 6;
+let pan = null;
+function clampView() {
+  view.k = clamp(view.k, 1, VIEW_MAX);
+  view.x = clamp(view.x, W - W * view.k, 0);
+  view.y = clamp(view.y, H - H * view.k, 0);
+  const z = $('zoom');
+  if (z) { z.classList.toggle('on', view.k > 1.02); const b = $('zlvl'); if (b) b.textContent = '×' + view.k.toFixed(1); }
+}
+function zoomAt(mx, my, mul) {
+  const k0 = view.k;
+  view.k = clamp(view.k * mul, 1, VIEW_MAX);
+  /* 以光标为锚点：缩放前后，光标底下的那一点不动 */
+  view.x = mx - (mx - view.x) * (view.k / k0);
+  view.y = my - (my - view.y) * (view.k / k0);
+  clampView();
+}
+function resetView() { view.k = 1; view.x = view.y = 0; clampView(); }
 function applyRot() {
   const r = document.getElementById('rot'), on = document.body.classList.contains('ls');
   if (on) {
@@ -317,14 +351,14 @@ window.addEventListener('orientationchange', () => setTimeout(applyRot, 120));
    vs[armour, soft] · acc base accuracy · supp suppression (fire pins men without hitting)
    Splash weapons skip the hit roll; ammo is only tracked for airborne weapons          */
 const WPN = {
-  rifle:    { name:['Rifle','步枪'],          m:[['Kar98k','Kar98k'],['M1 Garand','M1 加兰德'],['Mosin-Nagant','莫辛纳甘']],                          proj:'bullet', dmg:5,  rng:105, rof:.50, hits:'ga', vs:[.45,1],   acc:.68, supp:.07 },
-  grenade:  { name:['Grenade','手榴弹'],      m:[['Stielhandgranate','长柄手榴弹'],['Mk.2 Grenade','Mk.2 手雷'],['RGD-33','RGD-33']],                proj:'bomb',   dmg:16, rng:58,  rof:4.5, hits:'g',  vs:[.6,1.4], vsH:0.35,  splash:26, supp:.3 },
-  hmg:      { name:['Machine Gun','重机枪'],  m:[['MG42','MG42'],['M1919 Browning','M1919 勃朗宁'],['DP-27','DP-27 转盘']],                          proj:'bullet', dmg:4,  rng:135, rof:.55, hits:'ga', vs:[.3,1.25], acc:.52, supp:.2,  burst:3 },
+  rifle:    { name:['Rifle','步枪'],          m:[['Kar98k','Kar98k'],['M1 Garand','M1 加兰德'],['Mosin-Nagant','莫辛纳甘']],                          proj:'bullet', dmg:5,  rng:105, rof:.50, hits:'ga', vs:[.45,6.3],   acc:.68, supp:.07 },
+  grenade:  { name:['Grenade','手榴弹'],      m:[['Stielhandgranate','长柄手榴弹'],['Mk.2 Grenade','Mk.2 手雷'],['RGD-33','RGD-33']],                proj:'bomb',   dmg:16, rng:58,  rof:4.5, hits:'g',  vs:[.6,3.0], vsH:0.35,  splash:26, supp:.3 },
+  hmg:      { name:['Machine Gun','重机枪'],  m:[['MG42','MG42'],['M1919 Browning','M1919 勃朗宁'],['DP-27','DP-27 转盘']],                          proj:'bullet', dmg:4,  rng:135, rof:.55, hits:'ga', vs:[.3,4.0], acc:.52, supp:.2,  burst:3 },
   srifle:   { name:['Sniper Rifle','狙击枪'], m:[['Kar98k ZF39','Kar98k ZF39'],['M1903A4 Springfield','M1903A4 春田'],['Mosin PU','莫辛 PU']],       proj:'bullet', dmg:30, rng:265, rof:2.2, hits:'g',  vs:[0.12,2.4],   acc:.93, supp:.05 },
   atTube:   { name:['AT Launcher','反坦克筒'],m:[['Panzerschreck','Panzerschreck'],['M9 Bazooka','M9 巴祖卡'],['PTRD-41','PTRD-41']],                proj:'rocket', dmg:52, rng:150, rof:3.0, hits:'g',  vs:[2.2,.5], vsH:3.2,  acc:.82, supp:.12, minRng:30 },
   tankGun:  { name:['Tank Gun','坦克炮'],     m:[['8.8cm KwK 36','8.8cm KwK 36'],['75mm M3','75mm M3'],['76mm F-34','76mm F-34']],                   proj:'shell',  dmg:30, rng:185, rof:1.3, hits:'g',  vs:[1.2,1], vsH:2.2,   acc:.80, supp:.28 },
-  coax:     { name:['Coaxial MG','同轴机枪'], m:[['MG34','MG34'],['M1919A4','M1919A4'],['DT-29','DT-29']],                                           proj:'bullet', dmg:4,  rng:112, rof:.45, hits:'ga', vs:[.25,1.3], acc:.60, supp:.18, burst:3 },
-  htMg:     { name:['Vehicle MG','车载机枪'], m:[['MG34 mount','MG34 车载'],['M2 .50 cal','M2 .50'],['DShK 12.7','DShK 12.7']],                      proj:'bullet', dmg:7,  rng:150, rof:.40, hits:'ga', vs:[.4,1.3],  acc:.58, supp:.24, burst:2 },
+  coax:     { name:['Coaxial MG','同轴机枪'], m:[['MG34','MG34'],['M1919A4','M1919A4'],['DT-29','DT-29']],                                           proj:'bullet', dmg:4,  rng:112, rof:.45, hits:'ga', vs:[.25,4.0], acc:.60, supp:.18, burst:3 },
+  htMg:     { name:['Vehicle MG','车载机枪'], m:[['MG34 mount','MG34 车载'],['M2 .50 cal','M2 .50'],['DShK 12.7','DShK 12.7']],                      proj:'bullet', dmg:7,  rng:150, rof:.40, hits:'ga', vs:[.4,3.4],  acc:.58, supp:.24, burst:2 },
   flakLt:   { name:['Light Flak','轻高炮'],   m:[['2cm Flakvierling 38','2cm 四联高炮'],['M45 Quad .50','M45 四联 .50'],['61-K 37mm','61-K 37mm']],  proj:'flak',   dmg:16, rng:200, rof:.42, hits:'a',  vs:[1,1],     acc:.50, supp:.06, burst:3 },
   flak88:   { name:['Heavy Flak','重高炮'],   m:[['8.8cm Flak 36','8.8cm Flak 36'],['90mm M1','90mm M1'],['52-K 85mm','52-K 85mm']],                 proj:'shell',  dmg:60, rng:360, rof:2.8, hits:'ga', vs:[1.8,0.85], vsH:2.4, acc:.84, supp:.3 },
   howitzer: { name:['Howitzer','榴弹炮'],     m:[['15cm sFH 18','15cm sFH 18'],['105mm M101','105mm M101'],['122mm M-30','122mm M-30']],             proj:'bomb',   dmg:40, rng:400, rof:3.0, hits:'g',  vs:[1,1.2], vsH:1.4,   splash:56, supp:.55 },
@@ -2243,6 +2277,7 @@ function drawTip(u) {
 const zbuf = [];
 function render() {
   mainCtx.save();
+  mainCtx.setTransform(DPR * view.k, 0, 0, DPR * view.k, DPR * view.x, DPR * view.y);
   drawPaper();
   for (const u of units) if (u.d.key === 'rail' && u.hp > 0 && ON_RAILS[natIdx(u.side)]) drawRailTrack(u);
   for (const w of works) drawWork(w);
@@ -2324,7 +2359,7 @@ function loop(now) {
 /* ══════════════════════════ 交互 ══════════════════════════ */
 const hover = { on: 0, x: 0, y: 0 };
 let drawing = 0, lastPut = 0, lastX = -1e9, lastY = -1e9;
-const pos = e => [e.offsetX, e.offsetY];
+const pos = e => [(e.offsetX - view.x) / view.k, (e.offsetY - view.y) / view.k];
 function put(x, y) {
   const now = performance.now();
   if (now - lastPut < 80 || Math.hypot(x - lastX, y - lastY) < 14) return;
@@ -2334,6 +2369,13 @@ function put(x, y) {
   hideBanner();
 }
 cv.addEventListener('pointerdown', e => {
+  if (e.button === 1) {                              // 中键：拖动画面
+    e.preventDefault();
+    pan = { sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y };
+    cv.setPointerCapture(e.pointerId);
+    document.body.classList.add('panning');
+    return;
+  }
   const q = pos(e);
   if (armed) {                                     // 指令落点
     const g = unproj(q[0], q[1]);
@@ -2345,12 +2387,24 @@ cv.addEventListener('pointerdown', e => {
   put(q[0], q[1]);
 });
 cv.addEventListener('pointermove', e => {
+  if (pan) { view.x = pan.vx + (e.clientX - pan.sx); view.y = pan.vy + (e.clientY - pan.sy); clampView(); return; }
   const q = pos(e);
   hover.on = 1; hover.x = q[0]; hover.y = q[1];
   if (drawing) put(q[0], q[1]);
 });
-cv.addEventListener('pointerup', () => drawing = 0);
-cv.addEventListener('pointercancel', () => drawing = 0);
+cv.addEventListener('pointerup', () => { pan = null; document.body.classList.remove('panning'); drawing = 0; });
+/* 滚轮缩放。passive:false 才能拦下页面滚动 */
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  const r = cv.getBoundingClientRect();
+  zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * .0016));
+}, { passive: false });
+/* 中键拖动。Chrome 的中键默认是自动滚动，得在 mousedown 上拦 */
+cv.addEventListener('mousedown', e => { if (e.button === 1) e.preventDefault(); });
+cv.addEventListener('auxclick', e => { if (e.button === 1) e.preventDefault(); });
+if ($('zfit')) $('zfit').onclick = resetView;
+
+cv.addEventListener('pointercancel', () => { pan = null; document.body.classList.remove('panning'); drawing = 0; });
 cv.addEventListener('pointerleave', () => { drawing = 0; hover.on = 0; });
 
 /* 兵种按钮 */
