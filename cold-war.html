@@ -16,6 +16,11 @@
   #rot{display:flex;flex-direction:column;flex:1 1 auto;width:100%;min-height:0}
   body.ls #rot{position:fixed;top:0;left:0;transform-origin:0 0}
   #lsb{display:none}
+  a.era{
+    font-size:11px;color:var(--ink);opacity:.45;text-decoration:none;
+    border-bottom:1px dotted currentColor;margin-left:10px;white-space:nowrap;
+  }
+  a.era:hover{opacity:.85}
   header{
     flex:0 0 auto;display:flex;align-items:center;gap:12px;
     padding:4px 12px;background:var(--paper);border-bottom:2px dashed #c9bfa6;
@@ -99,7 +104,7 @@
 <div id="rot">
 
 <header>
-  <h1>草稿纸大战 <span class="s">/ US vs USSR</span></h1>
+  <h1>草稿纸大战 <span class="s">/ US vs USSR</span><a class="era" href="index.html">← 1944</a></h1>
   <div class="score">
     <span class="sb">US <b id="nb">0</b></span>
     <div id="bar"><i class="b" id="pb"></i><i class="r" id="pr"></i></div>
