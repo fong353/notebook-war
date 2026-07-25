@@ -781,6 +781,7 @@ function update(dt) {
     shells[i].t -= dt;
     if (shells[i].t <= 0) { shells[i].fn(); shells.splice(i, 1); }
   }
+  if (truce > 0) truce -= dt;                        // 停火期间谁都不开枪
   evTimer -= dt;                                     // 战场奇观：自己会来，不用你操作
   if (evTimer <= 0) { evTimer = rnd(60, 105); runSpectacle(); }
 
@@ -1061,7 +1062,7 @@ function update(dt) {
                    (u.boost ? .7 : 1) * (u.resupplied ? .85 : 1) * (u.prone > .5 ? 1.35 : 1);
     u.resupplied = 0;
     for (const w of u.ws) if (w.cd > 0) w.cd -= dt;
-    if (t && !u.d.suicide && !u.rtb && u.mode === 0 && !u.egress) {   // 脱离途中背对目标，不开火
+    if (t && !u.d.suicide && !u.rtb && u.mode === 0 && !u.egress && truce <= 0) {   // 脱离途中背对目标，不开火
       const wp = pickWeapon(u, t, dist3(u, t));
       if (wp) {
         wp.cd = wp.d.rof * rnd(.85, 1.15) * rofMul;
@@ -1136,7 +1137,7 @@ function update(dt) {
             pushLog(sideName(kr.side) + ' ' + L(kr.d.name) + T('lgPromote') + L(RANK_NAME[nr]));
           }
           pushLog(sideName(kr.side) + ' ' + (kr.rank ? L(RANK_NAME[kr.rank]) + ' ' : '') + L(kr.d.name) +
-                  T('lgDestroy') + sideName(u.side) + ' ' + L(u.d.name));
+                  T('lgDestroy') + sideName(u.side) + ' ' + L(u.d.name) + (u.ace ? ' ★' : ''));
         }
       }
     }
@@ -1345,6 +1346,7 @@ function execCmd(id, wx, wz) {
    Occasional set-pieces that fire on their own — no order, no cooldown button.
    Each belongs to one nation, so you only see it when that nation is in the match. */
 let evTimer = rnd(40, 75);
+let truce = 0;                                     // 停火倒计时（圣诞休战）
 function farSide(side) { return side === 0 ? rnd(WORLD_W * .52, WORLD_W - 70) : rnd(70, WORLD_W * .48); }
 /* Aim a set-piece at where the enemy actually is — a random patch of empty
    field makes for an expensive fireworks display and nothing else */
@@ -1367,12 +1369,14 @@ function skyFall(side, wx, wz, dmg, splash, dur, alt) {
 const shells = [];
 function setTimeoutShell(delay, fn) { shells.push({ t: delay, fn }); }
 function runSpectacle() {
-  const pool = SPECTACLE.filter(e => e.nat === match[0] || e.nat === match[1]);
+  /* nat < 0 = 不属于任何一方，随便挑一边发动；when 用来卡前置条件 */
+  const ok = e => (e.nat < 0 || e.nat === match[0] || e.nat === match[1]);
+  const pool = SPECTACLE.filter(e => ok(e) && (!e.when || e.when(e.nat < 0 ? 0 : (e.nat === match[0] ? 0 : 1))));
   if (!pool.length) return;
   const e = pick(pool);
-  const side = e.nat === match[0] ? 0 : 1;
+  const side = e.nat < 0 ? (Math.random() < .5 ? 0 : 1) : (e.nat === match[0] ? 0 : 1);
   e.go(side);
-  pushLog('⚑ ' + sideName(side) + ' — ' + L(e.name));
+  pushLog('⚑ ' + (e.nat < 0 ? '' : sideName(side) + ' — ') + L(e.name));
 }
 
 const SPECTACLE = [
@@ -1392,6 +1396,43 @@ const SPECTACLE = [
       const c = enemyCentre(side);
       for (let i = 0; i < 7; i++)
         ordnance(side, c[0] + (i - 3) * 40 * K + rnd(-16, 16), c[1] + rnd(-90, 90) / DEPTH, .4 + i * .5, 110, 120, 1.1);
+    } },
+  { nat: 2, name: ['Flying Circus', '飞行马戏团'], go(side) {
+      /* Jasta 11 — the whole squadron, all aces */
+      for (let i = 0; i < 4; i++) {
+        const u = spawn(side, 'fig', side === 0 ? -40 - i * 50 : WORLD_W + 40 + i * 50, .22 + i * .16);
+        u.rank = 2; u.circus = 1;
+      }
+    } },
+  { nat: 0, name: ['Cambrai wedge', '康布雷坦克楔'], go(side) {
+      /* The first mass tank attack in history */
+      for (let i = 0; i < 7; i++)
+        spawn(side, 'tank', side === 0 ? -30 - i * 42 : WORLD_W + 30 + i * 42, .18 + i * .105);
+    } },
+  { nat: 2, name: ['Stormtrooper push', '暴风突击'], go(side) {
+      /* Spring 1918: the barrage walks, the assault squads follow it in */
+      const c = enemyCentre(side), fwd = side === 0 ? 1 : -1;
+      for (let step = 0; step < 5; step++)
+        for (let i = 0; i < 3; i++)
+          ordnance(side, c[0] - fwd * 150 * K + fwd * step * 46 * K + rnd(-20, 20),
+                   c[1] + (i - 1) * .26, .3 + step * .5, 40, 54, .6);
+      for (let i = 0; i < 6; i++) {
+        const u = spawn(side, 'para', c[0] - fwd * 240 * K + rnd(-30, 30), c[1] + rnd(-.2, .2));
+        u.boost = 14;
+      }
+    } },
+  { nat: 1, name: ['Balloon buster', '气球猎手'],
+    when: side => units.some(u => u.side !== side && u.hp > 0 && u.d.key === 'balloon'),
+    go(side) {
+      for (let i = 0; i < 2; i++) {
+        const u = spawn(side, 'fig', side === 0 ? -30 - i * 60 : WORLD_W + 30 + i * 60, rnd(.2, .8));
+        u.rank = 2;
+      }
+    } },
+  { nat: -1, name: ['Christmas truce', '圣诞休战'], go() {
+      /* Everyone stops shooting. Nothing else in the game does this. */
+      truce = 15;
+      for (const u of units) { u.sup = 0; u.prone = 0; }
     } },
   { nat: 1, name: ['French 75 rafale', '法国 75 速射'], go(side) {
       const c = enemyCentre(side);
@@ -1642,24 +1683,44 @@ const DRAW = {
     if (u.flash > .6) rline(2 + Math.cos(el) * 15, y - 8 - Math.sin(el) * 15,
                             2 + Math.cos(el) * 27, y - 8 - Math.sin(el) * 27, 5);
   },
-  /* Siege gun on a rail carriage: long flat deck, bogies at each end, and a barrel
-     that dwarfs it. The track itself is drawn on the ground layer, running in depth. */
+  /* Siege guns, three different carriages — only two of them are actually on rails.
+     BEF 14in "Boche-Buster" and the French 320mm ride rail trucks; the German
+     42cm Dicke Bertha is a road piece on enormous wheels with a stubby howitzer barrel. */
   rail(u, n) {
-    const y = -9, el = Math.max(.3, u.aimEl);
-    rpoly([[-32, y + 7], [-31, y], [27, y], [30, y + 7]], true);          // flat deck
-    ctx.lineWidth *= .8;
-    rline(-31, y + 3, 28, y + 3);                                          // deck rib
-    ctx.lineWidth /= .8;
-    for (let i = 0; i < 4; i++) { rcirc(-26 + i * 5.5, y + 9, 2.3); rcirc(12 + i * 5.5, y + 9, 2.3); }
-    rpoly([[-26, y + 7], [-6, y + 7], [-6, y + 11], [-26, y + 11]], true); // bogie frames
-    rpoly([[10, y + 7], [30, y + 7], [30, y + 11], [10, y + 11]], true);
-    rpoly([[-12, y], [-10, y - 12], [9, y - 12], [11, y]], true);          // gun cradle
-    rline(-12, y - 6, -20, y - 2);                                         // recoil spade
-    ctx.lineWidth *= 3;
-    const e = barrel(2, y - 10, n === 2 ? 40 : 36, el, u.face);            // the barrel is the whole point
-    ctx.lineWidth /= 3;
-    rcirc(e[0] - Math.cos(el) * 6, e[1] + Math.sin(el) * 6, 2.2);          // muzzle band
-    mark(-20, y - 4, 2.6, n);
+    const el = Math.max(.3, u.aimEl);
+    let e;
+    if (n === 2) {
+      /* Dicke Bertha: wheels taller than the carriage, short fat howitzer barrel */
+      const y = -12;
+      rpoly([[-16, y + 10], [-14, y], [12, y], [15, y + 10]], true);
+      rcirc(-8, y + 10, 10); rcirc(9, y + 10, 10);                    // huge road wheels
+      ctx.lineWidth *= .7;
+      for (let i = 0; i < 6; i++) {                                    // spokes
+        const a = i / 6 * 3.14;
+        rline(-8 - Math.cos(a) * 8, y + 10 - Math.sin(a) * 8, -8 + Math.cos(a) * 8, y + 10 + Math.sin(a) * 8, .8);
+      }
+      ctx.lineWidth /= .7;
+      rline(-14, y + 4, -30, y + 12);                                  // trail
+      rpoly([[-6, y], [-4, y - 8], [6, y - 8], [8, y]], true);
+      ctx.lineWidth *= 4.2;
+      e = barrel(2, y - 6, 20, el, u.face);                            // short, very fat
+      ctx.lineWidth /= 4.2;
+      mark(-11, y - 3, 2.6, n);
+    } else {
+      const y = -9, long = n === 1;
+      rpoly([[-32, y + 7], [-31, y], [27, y], [30, y + 7]], true);
+      ctx.lineWidth *= .8; rline(-31, y + 3, 28, y + 3); ctx.lineWidth /= .8;
+      for (let i = 0; i < 4; i++) { rcirc(-26 + i * 5.5, y + 9, 2.3); rcirc(12 + i * 5.5, y + 9, 2.3); }
+      rpoly([[-26, y + 7], [-6, y + 7], [-6, y + 11], [-26, y + 11]], true);
+      rpoly([[10, y + 7], [30, y + 7], [30, y + 11], [10, y + 11]], true);
+      rpoly([[-12, y], [-10, y - 12], [9, y - 12], [11, y]], true);
+      rline(-12, y - 6, -20, y - 2);
+      ctx.lineWidth *= 2.6;
+      e = barrel(2, y - 10, long ? 40 : 34, el, u.face);
+      ctx.lineWidth /= 2.6;
+      if (long) rcirc(e[0] - Math.cos(el) * 9, e[1] + Math.sin(el) * 9, 2.6);   // recoil sleeve
+      mark(-20, y - 4, 2.6, n);
+    }
     if (u.flash > .4) {
       rcirc(e[0] + Math.cos(el) * 10, e[1] - Math.sin(el) * 10, 11, 6);
       ctx.lineWidth *= 2.4;
@@ -1931,6 +1992,15 @@ function drawHP(u, q, sc) {
       rline(sx - 2, sy, sx + 2, sy, .7); rline(sx, sy - 2, sx, sy + 2, .7);
     }
   }
+  /* 王牌：血条左边一顶小冠，一眼认得出该点名打谁 */
+  if (u.ace) {
+    ctx.globalAlpha = .95;
+    ctx.strokeStyle = '#a8791e'; ctx.lineWidth = 1.4; ctx.lineCap = 'round';
+    seed(u.sd + 21);
+    const cx = q[0] - w / 2 - 5, cy = y + h / 2;
+    rpoly([[cx - 3, cy + 2], [cx - 3, cy - 1], [cx - 1.2, cy + .6], [cx, cy - 2.4],
+           [cx + 1.2, cy + .6], [cx + 3, cy - 1], [cx + 3, cy + 2]], true, .7);
+  }
   /* 鼓舞中：头顶感叹号 */
   if (u.boost > 0) {
     ctx.globalAlpha = .8;
@@ -2095,6 +2165,7 @@ function drawSmoke(s) {
 }
 /* The track a siege gun sits on: laid in depth, so perspective turns it into a
    long line running back towards the vanishing point */
+const ON_RAILS = [true, true, false];                    // 轮式/履带式的那两家没有铁路
 function drawRailTrack(u) {
   ctx.save();
   seed(u.sd + 11); ctx.lineCap = 'round';
@@ -2241,7 +2312,7 @@ const zbuf = [];
 function render() {
   mainCtx.save();
   drawPaper();
-  for (const u of units) if (u.d.key === 'rail' && u.hp > 0) drawRailTrack(u);
+  for (const u of units) if (u.d.key === 'rail' && u.hp > 0 && ON_RAILS[natIdx(u.side)]) drawRailTrack(u);
   for (const w of works) drawWork(w);
   zbuf.length = 0;
   for (const w of wrecks) zbuf.push([w.wz, 0, w]);
