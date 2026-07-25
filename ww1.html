@@ -40,6 +40,7 @@
   #wrap{flex:1 1 auto;position:relative;min-height:0}
   canvas{display:block;width:100%;height:100%;cursor:crosshair;touch-action:none}
   body.aiming canvas{cursor:cell}
+  button.cmd.nospect{opacity:.42;cursor:default}
   body.panning canvas{cursor:grabbing}
   #zoom{
     position:absolute;right:10px;top:8px;display:none;gap:5px;align-items:center;
@@ -213,7 +214,7 @@ const UI = {
   lgAmmo:   [' RTB — out of ammo', ' 弹尽返航'],
   lgInit:   [' seizes the initiative', ' 转入攻势'],
   lgStrike: [' calls in an air strike', ' 呼叫空袭'],
-  lgNoSpect:[' — nothing outsized qualifies right now', ' —— 眼下没有够条件的大家伙'],
+  spectNone:['(no set-play)', '（无奇观）'],
   lgBarrage:[' requests a barrage', ' 请求炮火覆盖'],
   lgReinf:  [' reinforcements arrive', ' 紧急增援抵达'],
   lgRally:  [' rallies ', ' 全线鼓舞 '],  lgUnits: [' units', ' 部队'],
@@ -1358,8 +1359,7 @@ const CMDS = [
   { id:'smoke',   name:['Gas','毒气'],       tip:['A drifting gas cloud: keeps hurting and pinning anyone caught in it','飘散的毒气云：持续伤害并压制云里的一切'], cd:22, aim:1 },
   { id:'mine',    name:['Mine','坑道爆破'], tip:['Sappers have been digging for weeks. Fires after a delay, and leaves a hole in the map','工兵挖了几周的坑道，延迟起爆，地图上会留个大坑'], cd:70, aim:1 },
   { id:'airdrop', name:['Raid','突击队'],    tip:['A raiding party goes over the top into the target trench','一队突击兵越出战壕，摸进指定阵地'], cd:34, aim:1 },
-  { id:'spectF',  name:['Set-piece','奇观部队'], tip:['Bring on an outsized formation — it joins the battle and fights on like anything else','把一支超规格的部队拉上来。它加入战场之后就跟别的单位一样接着打'], cd:85, aim:0 },
-  { id:'spectA',  name:['Set-play','奇观行动'],  tip:['Stage a one-off action — a charge, a barrage, a rocket. It happens once and it is over','来一次一次性的动作：一场冲锋、一轮弹幕、一发火箭。发生过就结束了'], cd:85, aim:0 },
+  { id:'spect',   name:['Set-play','奇观行动'],  tip:['A one-off action — a charge, a barrage, a rocket. The button says which one is standing by','一次性的动作：一场冲锋、一轮弹幕、一发火箭。按钮上写着眼下待命的是哪一个'], cd:85, aim:0 },
 ];
 const cmdCd = {};
 CMDS.forEach(c => cmdCd[c.id] = 0);
@@ -1429,9 +1429,11 @@ function execCmd(id, wx, wz) {
                     r0: rnd(56, 82) * K, r: 30, t: 0, life: 16, gas: 1, side,
                     sd: (Math.random() * 1e6) | 0 });
     pushLog(sideName(side) + T('lgSmoke'));
-  } else if (id === 'spectF' || id === 'spectA') {
-    /* 奇观各有前置条件，凑不齐就是叫不动 —— 冷却照走，跟别的指令一个规矩 */
-    if (!runSpectacle(side, id === 'spectF' ? 'force' : 'act')) pushLog(sideName(side) + T('lgNoSpect'));
+  } else if (id === 'spect') {
+    /* 直接放按钮上写着的那个，不在这里重抽 —— 否则万一这一瞬前置条件塌了，
+       就会出现"按钮写着 A、发动的是 B" */
+    if (!actQ) return;                       // 按钮已经写明没有可用的，这不算用掉一次
+    fireSpect(actQ); refreshAct(true);
   }
   cmdCd[id] = CMDS.find(c => c.id === id).cd;
 }
@@ -1463,7 +1465,7 @@ function skyFall(side, wx, wz, dmg, splash, dur, alt) {
 /* 简易延迟：把回调挂进特效队列，跟着模拟时钟走（不用真实计时器） */
 const shells = [];
 function setTimeoutShell(delay, fn) { shells.push({ t: delay, fn }); }
-function runSpectacle(forceSide, kind) {
+function spectPool(forceSide, kind) {
   /* nat < 0 = 不属于任何一方，随便挑一边发动；when 用来卡前置条件 */
   const ok = e => (e.nat < 0 || e.nat === match[0] || e.nat === match[1]);
   /* 不属于任何一方的奇观两边都可能发动，所以前置条件得逐边验 —— 否则会
@@ -1477,12 +1479,32 @@ function runSpectacle(forceSide, kind) {
     for (const sd of sides) if (!e.when || e.when(sd))
       for (let i = e.w || 1; i > 0; i--) pool.push([e, sd]);   // w = 抽中权重
   }
+  return pool;
+}
+function runSpectacle(forceSide, kind) {
+  const pool = spectPool(forceSide, kind);
   if (!pool.length) return false;
-  const [e, side] = pick(pool);
-  e.go(side);
-  pushLog('⚑ ' + (e.nat < 0 ? '' : sideName(side) + ' — ') + L(e.name));
+  fireSpect(pick(pool));
   return true;
 }
+function fireSpect(entry) {
+  const [e, side] = entry;
+  e.go(side);
+  pushLog('⚑ ' + (e.nat < 0 ? '' : sideName(side) + ' — ') + L(e.name));
+}
+/* 待命的那一个奇观行动。按钮上直接写它的名字 —— 玩家该知道自己按下去会
+   发生什么，而不是抽一次盲盒。前置条件还成立就一直留着，免得按钮上的字
+   每帧乱跳；用掉了、或者条件塌了、或者换了执笔方，才重新挑一个 */
+let actQ = null;
+function refreshAct(force) {
+  if (!force && actQ && actQ[1] === curSide) {
+    const [e, sd] = actQ;
+    if ((e.nat < 0 || e.nat === match[sd]) && (!e.when || e.when(sd))) return;
+  }
+  const pool = spectPool(curSide, 'act');
+  actQ = pool.length ? pick(pool) : null;
+}
+
 
 const SPECTACLE = [
   { nat: 2, name: ['Zeppelin raid', '齐柏林夜袭'], kind:'force', go(side) {
@@ -2598,6 +2620,16 @@ function loop(now) {
     b.classList.toggle('cooling', cmdCd[c.id] > 0);
     b.classList.toggle('ready', cmdCd[c.id] <= 0);
     b.classList.toggle('armed', armed === c.id);
+    if (c.id === 'spect') {
+      refreshAct();
+      /* 带上 ⚑ ——日志里奇观也是这个记号，一眼看出这按钮不是常规指令 */
+      const nm = actQ ? '⚑ ' + L(actQ[0].name) : T('spectNone');
+      if (b.dataset.nm !== nm) {
+        b.dataset.nm = nm; b.firstChild.textContent = nm;
+        b.title = L(c.name) + ' · ' + nm + ' (' + T('cooldown') + ' ' + c.cd + 's)\n' + L(c.tip);
+      }
+      b.classList.toggle('nospect', !actQ);
+    }
   }
   requestAnimationFrame(loop);
 }

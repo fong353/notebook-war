@@ -59,10 +59,11 @@ A single HTML file. No build step, no dependencies, no network calls — open it
   Zeppelin raids, the Paris Gun, railway-gun barrages, over-the-top waves, a cavalry charge.
   Each belongs to one nation, so you only see it when that nation is in the match.
 - **Commander orders** on cooldowns — air strike, barrage, reinforce, rally, smoke, airdrop, plus a
-  mine in 1918 — so you can lean on the battle without micromanaging it. Two of them call in set-pieces, split by
-  what they are: a **force** is an outsized formation that joins the battle and fights on like
-  anything else (a Zeppelin, Jasta 11, the Cambrai wedge); an **action** happens once and is over
-  (a charge, a barrage, a V-2). Each has its own precondition, so sometimes nothing comes.
+  mine in 1918 — so you can lean on the battle without micromanaging it. One of them stages a **set-play** — a one-off
+  action like a charge, a barrage or a V-2. The button is labelled with whichever one is standing
+  by, so you always know what you are about to set off; each has its own precondition, so what is
+  on offer changes as the battle does. The outsized *formations* stay unrequestable: a Zeppelin,
+  Jasta 11 or the Cambrai wedge still turns up on its own or not at all.
 
 ![Nations](docs/nations.png)
 
