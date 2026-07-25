@@ -292,6 +292,9 @@ const UNITS = {
   mlrs:  { name:'火箭炮', sub:'6发齐射',    k:'0', layer:'g', hp:92,  spd:7,  armor:1, h:18, w:['mlrsSalvo'],         weight:7 },
   supply:{ name:'补给车', sub:'解压制·快装填',k:'u',layer:'g', hp:80, spd:20, armor:1, h:16, w:[], hold:250, support:'supply', weight:8 },
   medic: { name:'医疗兵', sub:'救治伤员',   k:'i', layer:'g', hp:36,  spd:24, armor:0, h:22, w:[], hold:190, support:'medic',  weight:8 },
+  /* 伞兵：投下来时挂在伞上慢慢飘，落地收伞才算能打。weight 0 = 不进自动增援池，
+     只能靠"空降"指令或手动投放，免得凭空出现在地面上 */
+  para:  { name:'伞兵',   sub:'空降·精锐',  k:'p', layer:'g', hp:44,  spd:28, armor:0, h:24, w:['rifle','grenade'], aggr:1, weight:0 },
 
   fig:   { name:'战斗机', sub:'空空弹+航炮',k:'q', layer:'a', hp:72,  spd:68, armor:1, h:12, w:['aam','gunpod'],       alt:250, fuel:55, weight:13 },
   atk:   { name:'攻击机', sub:'舔地加特林', k:'w', layer:'a', hp:125, spd:46, armor:1, h:14, w:['gatling','agRocket'], alt:95,  fuel:50, weight:11 },
@@ -338,7 +341,7 @@ for (const k in UNITS) {
   d.aggr = !!d.aggr;                      // 显式标记：主武器是近战的才顶上去
   if (d.layer === 'a' && !d.wing) d.wing = 'fixed';   // 只有旋翼能悬停
 }
-const GROUND = ['inf','mg','sniper','atgm','tank','ifv','aa','sam','arty','mlrs','supply','medic'];
+const GROUND = ['inf','mg','sniper','atgm','tank','ifv','aa','sam','arty','mlrs','supply','medic','para'];
 const AIR = ['fig','atk','heli','bmb','drone','cruise'];
 const ALL = GROUND.concat(AIR);
 const SIDE_COL = ['#2f4f9e', '#b7332f'];      // NATO 蓝 / 苏联红
@@ -456,15 +459,16 @@ function spawn(side, key, wx, wz) {
     st: rnd(.72, 1.04), flash: 0, done: 0, silent: 0, noloss: 0,
     sup: 0, prone: 0, vet: 0, rank: 0, kills: 0,
     mode: 0, aimEl: 0, boost: 0, cover: null, link: null, smokeT: 0,
-    turnT: 0, orb: Math.random() * 6.3, leg: 0, egress: 0, bunker: null,
+    turnT: 0, orb: Math.random() * 6.3, leg: 0, egress: 0, bunker: null, dropping: 0,
   };
+  if (key === 'para') { u.alt = 300; u.dropping = 1; u.rank = 1; }   // 空降兵按精锐起步
   units.push(u);
   return u;
 }
 function weightedKey() {
   let tot = 0; for (const k of ALL) tot += UNITS[k].weight;
   let r = Math.random() * tot;
-  for (const k of ALL) { r -= UNITS[k].weight; if (r <= 0) return k; }
+  for (const k of ALL) { if (!UNITS[k].weight) continue; r -= UNITS[k].weight; if (r <= 0) return k; }
   return 'inf';
 }
 function power(side) {
@@ -698,6 +702,16 @@ function update(dt) {
     if (u.hp <= 0) continue;
     const air = u.d.layer === 'a';
     u.flash = Math.max(0, u.flash - dt * 4);
+    if (u.dropping) {                                  // 挂在伞上飘下来，这期间打不了也挨不着压制
+      u.alt -= 52 * dt;
+      u.wx += Math.sin(tick * .55 + u.sd) * 11 * dt;   // 随风摆
+      u.sup = 0;
+      if (u.alt <= 0) {
+        u.alt = 0; u.dropping = 0;
+        fx.push({ k: 'chute', wx: u.wx, wz: u.wz, alt: 0, t: 0, dur: 9, sd: u.sd });
+      }
+      continue;
+    }
     u.boost = Math.max(0, u.boost - dt);
     /* 工事里压制退得快，碉堡里最踏实 */
     u.sup = Math.max(0, u.sup - dt * (u.cover ? (u.cover.kind === 'bunker' ? .42 : .28) : .15));
@@ -1113,6 +1127,7 @@ const CMDS = [
   { id:'reinf',   name:'增援', tip:'后方立刻投入一批部队',               cd:16, aim:0 },
   { id:'rally',   name:'鼓舞', tip:'解除压制，全员提速抢攻 7 秒',        cd:30, aim:1 },
   { id:'smoke',   name:'烟雾', tip:'放一片烟，敌军打这片命中大降',       cd:18, aim:1 },
+  { id:'airdrop', name:'空降', tip:'运输机掠过，投下一队伞兵（落地才能开火）', cd:34, aim:1 },
 ];
 const cmdCd = {};
 CMDS.forEach(c => cmdCd[c.id] = 0);
@@ -1155,6 +1170,13 @@ function execCmd(id, wx, wz) {
     }
     fx.push({ k: 'rally', wx, wz, alt: 0, t: 0, dur: 1.1, sd: (Math.random() * 1e6) | 0, side });
     pushLog(SIDE_NAME[side] + ' 全线鼓舞 ' + n + ' 部队');
+  } else if (id === 'airdrop') {
+    fx.push({ k: 'flyby', wx, wz, alt: 350, t: 0, dur: 2.8, sd: (Math.random() * 1e6) | 0, side });
+    for (let i = 0; i < 5; i++) {
+      const u = spawn(side, 'para', wx + (i - 2) * 42 * K + rnd(-14, 14), wz + rnd(-.05, .05));
+      u.alt = 290 + i * 26;                     // 依次跳出舱门，高度错开
+    }
+    pushLog(SIDE_NAME[side] + ' 空降突击队');
   } else if (id === 'smoke') {
     for (let i = 0; i < 4; i++)
       smokes.push({ wx: wx + rnd(-70, 70), wz: wz + rnd(-70, 70) / DEPTH, alt: 0,
@@ -1195,6 +1217,18 @@ const DRAW = {
     rline(0, -12 + b, 7, -13.5 + b);
     ctx.lineWidth *= 1.3; rline(4, -13.5 + b, 13, -14.6 + b); ctx.lineWidth /= 1.3;
     if (u.flash > .3) rline(13, -14.6 + b, 19, -14.6 + b, 3);
+  },
+  /* 伞兵：伞下飘着的时候画伞盖＋吊绳，落地收伞就是个步兵 */
+  para(u, r) {
+    if (!u.dropping) { DRAW.inf(u, r); return; }
+    const sw = 14, top = -34;
+    rpoly([[-sw, top + 8], [-sw * .72, top + 1], [0, top - 1], [sw * .72, top + 1], [sw, top + 8]], false, 2.2);
+    if (r) sh(-sw * .8, top, sw * 1.6, 8, 4);
+    rline(-sw, top + 8, -2.5, -13); rline(sw, top + 8, 2.5, -13);
+    rline(-sw * .38, top + 3, -1, -13); rline(sw * .38, top + 3, 1, -13);
+    rcirc(0, -9, 4.2);                                  // 吊着的人
+    rline(0, -4.8, 0, 1); rline(0, 1, -3.5, 6); rline(0, 1, 3.5, 6);
+    rline(0, -7, 6, -5);                                // 挎着的枪
   },
   mg(u, r) {
     const p = u.prone > .5 ? 4 : 0;
@@ -1673,6 +1707,12 @@ function drawFx(f) {
       const a = sr() * 6.3, l = r * (1.1 + sr() * .7);
       rline(q[0] + Math.cos(a) * r * .7, q[1] + Math.sin(a) * r * .55, q[0] + Math.cos(a) * l, q[1] + Math.sin(a) * l * .78, 1.5);
     }
+  } else if (f.k === 'chute') {
+    /* 落地后瘫在地上的伞布，慢慢淡掉 */
+    ctx.globalAlpha = (1 - k) * .45;
+    ctx.strokeStyle = '#9c9484'; ctx.lineWidth = Math.max(1, 1.5 * sc);
+    for (let i = 0; i < 3; i++)
+      rline(q[0] - 11 * sc, q[1] - i * 2.2 * sc, q[0] + 12 * sc, q[1] - i * 2.8 * sc, 2.6);
   } else if (f.k === 'spark') {
     ctx.strokeStyle = '#3b3a36'; ctx.lineWidth = Math.max(1, 1.5 * sc);
     for (let i = 0; i < 5; i++) {
@@ -1779,6 +1819,63 @@ function drawWreck(w) {
   ctx.restore();
 }
 
+/* ══════════════════════════ 单位详情 ══════════════════════════ */
+const TIPFONT = '12px "HanziPen SC","Hanzipen SC","Chalkboard SE","PingFang SC",cursive';
+/* 光标底下压着哪个单位 */
+function unitAt(sx, sy) {
+  let best = null, bd = 1e9;
+  for (const u of units) {
+    const q = proj(u.wx, u.wz, u.alt || 0), sc = scaleAt(q[2]);
+    const d = Math.hypot(sx - q[0], sy - (q[1] - u.d.h * sc * .45));
+    if (d < 24 * sc && d < bd) { bd = d; best = u; }
+  }
+  return best;
+}
+function drawTip(u) {
+  const q = proj(u.wx, u.wz, u.alt || 0), sc = scaleAt(q[2]);
+  const L = [SIDE_NAME[u.side] + ' ' + u.d.name + (u.rank ? ' · ' + RANK_NAME[u.rank] : '')];
+  L.push('血 ' + Math.max(0, Math.ceil(u.hp)) + '/' + u.max + (u.kills ? '　战功 ' + u.kills : ''));
+  for (const w of u.ws)
+    L.push('· ' + w.d.name + ' ' + w.d.rof.toFixed(1) + 's' + (w.d.burst ? '×' + w.d.burst : '') +
+           (w.ammo !== Infinity ? '　弹 ' + w.ammo : '') + (w.cd > 0 ? '　装填中' : ''));
+  if (u.d.support) L.push('· ' + (u.d.support === 'medic' ? '治疗友军' : '解压制·快装填') +
+                          (u.link ? '（正在支援）' : ''));
+  const st = [];
+  if (u.sup > .05) st.push('压制 ' + Math.round(u.sup * 100) + '%');
+  if (u.prone > .5) st.push('卧倒');
+  if (u.bunker) st.push('驻守碉堡'); else if (u.cover) st.push('壕沟内');
+  if (u.mode === 1) st.push('撤退整补');
+  if (u.rtb) st.push('返航中');
+  if (u.d.fuel) st.push('油料 ' + Math.round(clamp(u.fuel / u.d.fuel, 0, 1) * 100) + '%');
+  if (u.dmgTrack) st.push('履带受损');
+  if (u.d.armor && u.hp / u.max < .25) st.push('炮塔卡滞');
+  if (u.boost > 0) st.push('受鼓舞');
+  if (st.length) L.push(st.join('　'));
+
+  ctx.save();
+  ctx.font = TIPFONT;
+  let wm = 0;
+  for (const l of L) wm = Math.max(wm, ctx.measureText(l).width);
+  const pad = 7, lh = 15, bw = wm + pad * 2, bh = L.length * lh + pad * 1.4;
+  let bx = q[0] + 24 * sc, by = q[1] - u.d.h * sc - bh - 6;
+  if (bx + bw > W - 6) bx = q[0] - 24 * sc - bw;
+  bx = clamp(bx, 4, Math.max(4, W - bw - 4));
+  by = clamp(by, 4, Math.max(4, H - bh - 4));
+  ctx.fillStyle = 'rgba(246,242,228,.95)';
+  ctx.fillRect(bx, by, bw, bh);
+  seed(u.sd + 77);                                  // 定住种子，框才不会抖
+  ctx.globalAlpha = .45; ctx.strokeStyle = SIDE_COL[u.side]; ctx.lineWidth = 1.2; ctx.lineCap = 'round';
+  rline(bx + (q[0] > bx + bw / 2 ? bw : 0), by + bh, q[0], q[1] - u.d.h * sc * .45, 1.4);
+  ctx.globalAlpha = 1; ctx.lineWidth = 1.6;
+  rpoly([[bx, by], [bx + bw, by], [bx + bw, by + bh], [bx, by + bh]], true, 1.5);
+  ctx.textBaseline = 'top';
+  L.forEach((l, i) => {
+    ctx.fillStyle = i === 0 ? SIDE_COL[u.side] : (i === L.length - 1 && st.length ? '#8a5a2a' : '#3b3a36');
+    ctx.fillText(l, bx + pad, by + pad * .7 + i * lh);
+  });
+  ctx.restore();
+}
+
 /* ══════════════════════════ 渲染 ══════════════════════════ */
 const zbuf = [];
 function render() {
@@ -1804,7 +1901,9 @@ function render() {
   /* 笔尖预览 / 指令准星 */
   if (hover.on) {
     const g = unproj(hover.x, hover.y);
-    if (armed) {
+    const hu = armed ? null : unitAt(hover.x, hover.y);
+    if (hu) drawTip(hu);                        // 光标压在单位上 → 看详情
+    else if (armed) {
       const q = proj(g[0], g[1], 0), sc = scaleAt(q[2]);
       ctx.save(); seed((tick * 6) | 0);
       ctx.globalAlpha = .55; ctx.strokeStyle = SIDE_COL[curSide]; ctx.lineWidth = 1.8; ctx.lineCap = 'round';
