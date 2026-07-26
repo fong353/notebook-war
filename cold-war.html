@@ -677,6 +677,24 @@ function audioCtx() {
   if (AC.state === 'suspended') AC.resume();
   return AC;
 }
+/* 还是同一支笔画出来的电子音，只是按弹种分了几种口音：步枪脆、高炮闷一档、
+   火炮往下沉、火箭是噪声上扫的"咻"、航弹是掉下去的哨音。 */
+const TONE = {          /* 波形          起频   止频  时长  音量 */
+  shot:   ['square',     980, 170, .07, .028],   // 步枪机枪：短促一声
+  flak:   ['square',     520, 120, .11, .030],   // 高炮：低一档、拖长一点
+  cannon: ['sawtooth',   240,  55, .22, .038],   // 火炮坦克炮：闷着往下沉
+  drop:   ['triangle',   880, 190, .42, .020],   // 航弹：投下去的下滑哨音
+  ric:    ['triangle',  1800, 600, .17, .035],   // 跳弹
+  pew:    ['sawtooth',   380, 150, .18, .028],   // 兜底：老的那个声音
+};
+const FIRE_SND = { bullet: 'shot', flak: 'flak', shell: 'cannon',
+                   rocket: 'rocket', bomb: 'drop', drop: 'drop' };
+/* 一小段衰减白噪声，爆炸和火箭尾焰共用；pow 越大收得越快 */
+function noiseBuf(ac, sec, pow) {
+  const n = (44100 * sec) | 0, b = ac.createBuffer(1, n, 44100), ch = b.getChannelData(0);
+  for (let i = 0; i < n; i++) ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, pow);
+  const s = ac.createBufferSource(); s.buffer = b; return s;
+}
 function beep(type) {
   if (!sound) return;
   try {
@@ -686,26 +704,37 @@ function beep(type) {
     recent.push(t);
     const g = ac.createGain();
     g.connect(master);
-    if (type === 'boom') {
-      const n = 5000, b = ac.createBuffer(1, n, 44100), ch = b.getChannelData(0);
-      for (let i = 0; i < n; i++) ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2);
-      const s = ac.createBufferSource(); s.buffer = b;
-      const f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 620;
-      s.connect(f); f.connect(g); g.gain.value = .12; s.start(t);
-    } else if (type === 'ric') {
-      const o = ac.createOscillator();
-      o.type = 'triangle';
-      o.frequency.setValueAtTime(1800, t);
-      o.frequency.exponentialRampToValueAtTime(600, t + .16);
-      g.gain.setValueAtTime(.035, t); g.gain.exponentialRampToValueAtTime(.001, t + .18);
-      o.connect(g); o.start(t); o.stop(t + .19);
+    if (type === 'boom' || type === 'boomL') {
+      /* 重炮和航弹落地是"轰"，火箭弹手雷这种小溅射是"啪" —— 差在低通扫到多低、拖多长 */
+      const big = type === 'boomL', dur = big ? .21 : .11;
+      const s = noiseBuf(ac, dur, big ? 1.6 : 2.4);
+      const f = ac.createBiquadFilter(); f.type = 'lowpass';
+      f.frequency.setValueAtTime(big ? 520 : 780, t);
+      f.frequency.exponentialRampToValueAtTime(big ? 130 : 320, t + dur);
+      s.connect(f); f.connect(g); g.gain.value = big ? .14 : .10; s.start(t);
+    } else if (type === 'rocket') {
+      const s = noiseBuf(ac, .3, .5);            // 尾焰：噪声过带通一路往上扫
+      const f = ac.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.6;
+      f.frequency.setValueAtTime(320, t);
+      f.frequency.exponentialRampToValueAtTime(2400, t + .26);
+      g.gain.setValueAtTime(.002, t);
+      g.gain.exponentialRampToValueAtTime(.05, t + .05);
+      g.gain.exponentialRampToValueAtTime(.001, t + .3);
+      s.connect(f); f.connect(g); s.start(t);
     } else {
+      const [wave, f0, f1, dur, vol] = TONE[type] || TONE.pew;
       const o = ac.createOscillator();
-      o.type = type === 'shot' ? 'square' : 'sawtooth';
-      o.frequency.setValueAtTime(type === 'shot' ? 900 : 380, t);
-      o.frequency.exponentialRampToValueAtTime(150, t + (type === 'shot' ? .06 : .18));
-      g.gain.setValueAtTime(.028, t); g.gain.exponentialRampToValueAtTime(.001, t + .2);
-      o.connect(g); o.start(t); o.stop(t + .21);
+      o.type = wave;
+      o.frequency.setValueAtTime(f0, t);
+      o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+      g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + dur);
+      o.connect(g); o.start(t); o.stop(t + dur + .02);
+      if (type === 'cannon') {                   // 炮口那一下：低频锯齿上面再压一层短噪声
+        const s = noiseBuf(ac, .06, 3), nf = ac.createBiquadFilter();
+        nf.type = 'lowpass'; nf.frequency.value = 1100;
+        const ng = ac.createGain(); ng.gain.value = .06;
+        s.connect(nf); nf.connect(ng); ng.connect(master); s.start(t);
+      }
     }
   } catch (e) { }
 }
@@ -1205,7 +1234,7 @@ function fire(u, t, wp) {
   const d = W.proj === 'drop' ? distG(u, t) : dist3(u, t);
   for (let i = 0; i < n; i++) shoot(u, t, i * (W.proj === 'rocket' ? .16 : .09), d, W);
   u.flash = 1; u.fk = W.proj;
-  beep(W.proj === 'bullet' || W.proj === 'flak' ? 'shot' : 'pew');
+  beep(FIRE_SND[W.proj] || 'pew');
 }
 function shoot(u, t, delay, d3, W) {
   const k = W.proj, splash = W.splash || 0;
@@ -1285,7 +1314,7 @@ function hit(p) {
       }
     }
     suppress(p.ex, p.ez, r * 1.8, p.supp || .3, p.side);
-    beep('boom');
+    beep(r > 50 ? 'boomL' : 'boom');       // 榴弹炮航弹往上是"轰"，手雷火箭弹是"啪"
     return;
   }
   suppress(p.ex, p.ez, 62 * K, p.supp || .1, p.side);     // 子弹擦身而过也压人
