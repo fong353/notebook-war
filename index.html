@@ -927,6 +927,10 @@ function update(dt) {
     c.restore();
   }
   for (const id in cmdCd) if (cmdCd[id] > 0) cmdCd[id] = Math.max(0, cmdCd[id] - dt);
+  for (let i = shells.length - 1; i >= 0; i--) {     // 跟着模拟时钟的延迟队列
+    shells[i].t -= dt;
+    if (shells[i].t <= 0) { shells[i].fn(); shells.splice(i, 1); }
+  }
   evTimer -= dt;                                     // 战场奇观：自己会来，不用你操作
   if (evTimer <= 0) { evTimer = rnd(60, 105); runSpectacle(); }
 
@@ -1484,6 +1488,19 @@ function enemyCentre(side) {
     if (u.side !== side && u.hp > 0 && u.d.layer === 'g') { sx += u.wx; sz += u.wz; n++; }
   return n ? [sx / n, sz / n] : [farSide(side), .5];
 }
+const shells = [];
+function setTimeoutShell(delay, fn) { shells.push({ t: delay, fn }); }
+/* 看得见的发射：一道尾迹当着面从地面窜上天。不造成任何伤害，它的全部作用
+   就是让玩家知道这一发是谁、从哪儿打出去的。life 故意短于 dur —— 到顶之前
+   就销毁，免得走到 hit() 里去 */
+function launchTrail(side, wx, wz, alt, dur) {
+  projs.push({
+    kind: 'rocket', side, dmg: 0, dc: 'siege', pow: 0, splash: 0, supp: 0, owner: null,
+    sx: wx, sz: wz, sa: 0, ex: wx, ez: wz, ea: alt, wx, wz, alt: 0,
+    t: 0, pt: 0, delay: 0, life: dur * .95, col: sideCol(side),
+    sd: (Math.random() * 1e6) | 0, miss: 1, dur, arc: 0, trail: [],
+  });
+}
 /* Something arriving straight down out of the sky */
 function skyFall(side, wx, wz, dmg, splash, dur, alt) {
   projs.push({
@@ -1535,8 +1552,16 @@ function refreshAct(force) {
 
 const SPECTACLE = [
   { nat: 0, name: ['V-2 rocket', 'V-2 火箭'], kind:'act', go(side) {
-      /* Supersonic — no warning, nothing can intercept it. It simply arrives. */
-      skyFall(side, farSide(side), rnd(.1, .9), 320, 200, 1.4, 900);
+      /* 原来这一条就是天上凭空掉一发 —— 威力是够的，但没有发射者也就没有戏，
+         玩家只看见对面炸了一片，不知道是什么东西干的。现在起竖车开到己方
+         后方，火箭当着面窜上天，几秒之后才落到对面。
+         落下来的那一段仍然没有预警、也拦不住 —— 那是 V-2 的本事。 */
+      const lx = side === 0 ? rnd(70, 150) : rnd(WORLD_W - 150, WORLD_W - 70);
+      const lz = rnd(.25, .75);
+      const car = spawn(side, 'supply', lx, lz);
+      car.boost = 8; car.leave = 13;                 // 开上来、竖起、放完就走
+      setTimeoutShell(2.6, () => { launchTrail(side, lx, lz, 900, 2.2); beep('cannon'); });
+      setTimeoutShell(5.6, () => skyFall(side, farSide(side), rnd(.1, .9), 320, 200, 1.4, 900));
     } },
   { nat: 0, name: ['V-1 flying bomb', 'V-1 飞弹'], kind:'act', go(side) {
       /* Slow and low, unlike the V-2 — flak actually gets a shot at this one */
@@ -1545,10 +1570,14 @@ const SPECTACLE = [
         u.alt = 150;
       }
     } },
-  { nat: 0, name: ["Wittmann's Tiger", '魏特曼的虎式'], kind:'force', go(side) {
-      /* One tank, named, with a crew that knows what it's doing */
-      const u = spawn(side, 'tank', side === 0 ? -30 : WORLD_W + 30, rnd(.3, .7));
-      u.rank = 2; u.max = Math.round(u.max * 2.3); u.hp = u.max; u.ace = 1;
+  { nat: 0, name: ["Wittmann's Tigers", '魏特曼的虎式小队'], kind:'force', go(side) {
+      /* 波卡基村，1944 年 6 月 13 日。一辆车长知道自己在干什么的虎式，
+         带两辆僚车压上来 —— 单开一辆看着像补员，成队开进来才是一件事 */
+      for (let i = 0; i < 3; i++) {
+        const u = spawn(side, 'tank', side === 0 ? -30 - i * 52 : WORLD_W + 30 + i * 52, .32 + i * .17);
+        u.rank = i ? 1 : 2; u.leave = 34;            // 冲一波就收队，不是来常驻的
+        if (!i) { u.max = Math.round(u.max * 2.3); u.hp = u.max; u.ace = 1; }
+      }
     } },
   { nat: 1, name: ['Thousand-bomber raid', '千机大轰炸'], kind:'force', go(side) {
       for (let i = 0; i < 8; i++) {
@@ -1556,8 +1585,9 @@ const SPECTACLE = [
         u.rank = 1;
       }
     } },
-  { nat: 2, name: ['Pakfront', '反坦克炮阵'], kind:'force', go(side) {
-      /* A line of guns dug in where the armour has to come through */
+  { nat: 2, name: ['Anti-tank strongpoint', '反坦克支撑点'], kind:'force', go(side) {
+      /* 原来这条叫 Pakfront，可那是德军的词，挂在苏军名下是考据错了。
+         库尔斯克的 ПТОП 是同一个意思：一排炮埋在装甲非过不可的地方 */
       const wz = rnd(.22, .78);
       for (let i = 0; i < 5; i++) {
         const u = spawn(side, 'sam', side === 0 ? rnd(210, 400) : rnd(WORLD_W - 400, WORLD_W - 210),
@@ -1565,13 +1595,22 @@ const SPECTACLE = [
         u.rank = 1;
       }
     } },
-  { nat: 1, name: ['Naval gunfire', '舰炮火力支援'], kind: 'act', go(side) {
-      /* 诺曼底外海的战列舰，14 吋炮打到内陆十几公里。炮本身在地平线外，
-         所以只看得见炮弹落下 —— 跟巴黎大炮一个道理 */
-      const c = enemyCentre(side);
-      for (let i = 0; i < 4; i++)
-        setTimeoutShell(i * .8, () => skyFall(side, c[0] + rnd(-130, 130),
-          c[1] + rnd(-95, 95) / DEPTH, 175, 145, 1.6, 860));
+  { nat: 1, name: ['Easy Eight platoon', 'E8 谢尔曼排'], kind: 'force', go(side) {
+      /* 这一条原来是诺曼底外海的战列舰。炮在地平线外几十公里，玩家只看得见
+         炮弹凭空落下 —— 换成一个排开进来，看得见谁在打。
+         M4A3E8：宽履带、平衡式悬挂，比早期谢尔曼稳当得多。一个排四辆 */
+      for (let i = 0; i < 4; i++) {
+        const u = spawn(side, 'tank', side === 0 ? -30 - i * 46 : WORLD_W + 30 + i * 46, .26 + i * .16);
+        u.rank = 1; u.leave = 34;
+      }
+    } },
+  { nat: 2, name: ['Guards heavy tanks', '近卫重坦克团'], kind: 'force', go(side) {
+      /* ИС-2，122mm 炮，装填慢得要命，但那是拿来砸开阵地的东西，
+         不是拿来跟坦克对射的。近卫番号意味着车组也是老手 */
+      for (let i = 0; i < 4; i++) {
+        const u = spawn(side, 'tank', side === 0 ? -30 - i * 50 : WORLD_W + 30 + i * 50, .28 + i * .15);
+        u.rank = 1; u.leave = 34; u.max = Math.round(u.max * 1.35); u.hp = u.max;
+      }
     } },
   { nat: 1, name: ['B-17 formation', 'B-17 编队'], kind:'force', go(side) {
       for (let i = 0; i < 4; i++) {

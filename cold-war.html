@@ -1488,6 +1488,25 @@ function skyFall(side, wx, wz, dmg, splash, dur, alt) {
 /* 简易延迟：挂进队列跟着模拟时钟走，不用真实计时器 */
 const shells = [];
 function setTimeoutShell(delay, fn) { shells.push({ t: delay, fn }); }
+/* 战略轰炸机把巡航导弹带到发射位，再一发一发从机腹底下丢出去。
+   型号跟着执笔的国家走 —— 美军是 B-52 放战斧，苏军是 Tu-95 放 Kh-55。
+   飞机半路被打下来，它那几发就没有了：这条因果是这个奇观的全部看点，
+   所以导弹一定要从飞机的当前位置生成，不能图省事从地图边上放。 */
+function launchFromBombers(side, planes, missiles) {
+  const fleet = [];
+  for (let i = 0; i < planes; i++) {
+    const u = spawn(side, 'bmb', side === 0 ? -60 - i * 90 : WORLD_W + 60 + i * 90, .3 + i * .34);
+    u.rank = 1;
+    fleet.push(u);
+  }
+  for (let i = 0; i < missiles; i++)
+    setTimeoutShell(4.5 + i * 1.2, () => {
+      const b = fleet[i % fleet.length];
+      if (!b || b.hp <= 0) return;                 // 载机没了，这一发也就没了
+      const m = spawn(side, 'cruise', b.wx, b.wz);
+      m.alt = b.alt;                               // 从机腹底下掉出来，不是凭空出现
+    });
+}
 function spectPool(forceSide, kind) {
   /* 这一版是固定的两家对阵，nat 直接就是 side */
   const pool = [];
@@ -1524,9 +1543,9 @@ function refreshAct(force) {
 }
 const SPECTACLE = [
   { nat: 0, name: ['Warthog run', '疣猪掠场'], kind: 'force', go(side) {
-      /* GAU-8 那门炮比飞机还出名 */
-      for (let i = 0; i < 2; i++) {
-        const u = spawn(side, 'atk', side === 0 ? -40 - i * 70 : WORLD_W + 40 + i * 70, .28 + i * .3);
+      /* GAU-8 那门炮比飞机还出名。两架看着像巡逻，一个中队掠过来才是一件事 */
+      for (let i = 0; i < 3; i++) {
+        const u = spawn(side, 'atk', side === 0 ? -40 - i * 62 : WORLD_W + 40 + i * 62, .22 + i * .26);
         u.rank = 2;
       }
     } },
@@ -1539,9 +1558,11 @@ const SPECTACLE = [
         u.ws.forEach(w => { w.cd = .5 + i * .5; });
       }
     } },
-  { nat: 0, name: ['Tomahawk salvo', '战斧齐射'], kind: 'act', go(side) {
-      for (let i = 0; i < 3; i++)
-        setTimeoutShell(i * 1.2, () => spawn(side, 'cruise', side === 0 ? -30 : WORLD_W + 30, rnd(.2, .8)));
+  { nat: 0, name: ['B-52 cruise strike', 'B-52 战斧突击'], kind: 'act', go(side) {
+      /* 原来战斧是从地图边上凭空飞进来的 —— 威力在，可谁放的？现在先看见
+         B-52 压过来，导弹是从机腹底下一发一发掉出去的。
+         最要紧的是这条因果：轰炸机半路被打下来，那几发就没有了 */
+      launchFromBombers(side, 2, 3);
     } },
   { nat: 1, name: ['Hind flight', '雌鹿编队'], kind: 'force', go(side) {
       /* 会飞的步兵战车，北约管它叫"雌鹿" */
@@ -1558,11 +1579,24 @@ const SPECTACLE = [
         u.ws.forEach(w => { w.cd = .4 + i * .35; });
       }
     } },
-  { nat: 1, name: ['Bear flyover', '熊式掠过'], kind: 'force', go(side) {
-      /* 涡桨的声音隔着几十公里都听得见 */
-      for (let i = 0; i < 2; i++) {
-        const u = spawn(side, 'bmb', side === 0 ? -50 - i * 80 : WORLD_W + 50 + i * 80, .3 + i * .35);
-        u.rank = 1;
+  { nat: 1, name: ['Tu-95 missile strike', '图-95 导弹突击'], kind: 'act', go(side) {
+      /* 熊式原来只是飞过去，涡桨响一响就没了 —— 好看，但什么也没发生。
+         它真正的活是把 Kh-55 带到发射位上 */
+      launchFromBombers(side, 2, 3);
+    } },
+  { nat: 1, name: ['Guards tank battalion', '近卫坦克营'], kind: 'force', go(side) {
+      /* 苏联装甲突击不是几辆车的事，是一整排压过来。前两辆是老车组 */
+      for (let i = 0; i < 6; i++) {
+        const u = spawn(side, 'tank', side === 0 ? -30 - i * 44 : WORLD_W + 30 + i * 44, .13 + i * .148);
+        u.leave = 32;
+        if (i < 2) u.rank = 1;
+      }
+    } },
+  { nat: 0, name: ['Armored cavalry troop', '装甲骑兵连'], kind: 'force', go(side) {
+      /* 对面那条的美军版：车少一点，车组好一点 */
+      for (let i = 0; i < 4; i++) {
+        const u = spawn(side, 'tank', side === 0 ? -30 - i * 48 : WORLD_W + 30 + i * 48, .24 + i * .17);
+        u.rank = 1; u.leave = 32;
       }
     } },
 ];

@@ -1478,6 +1478,17 @@ function skyFall(side, wx, wz, dmg, splash, dur, alt) {
 /* 简易延迟：挂进队列跟着模拟时钟走，不用真实计时器 */
 const shells = [];
 function setTimeoutShell(delay, fn) { shells.push({ t: delay, fn }); }
+/* 看得见的发射：一道尾迹当着面从地面窜上天。不造成任何伤害，它的全部作用
+   就是让玩家知道这一发是谁、从哪儿打出去的。life 故意短于 dur —— 到顶之前
+   就销毁，免得走到 hit() 里去 */
+function launchTrail(side, wx, wz, alt, dur) {
+  projs.push({
+    kind: 'rocket', side, dmg: 0, dc: 'siege', pow: 0, splash: 0, supp: 0, owner: null,
+    sx: wx, sz: wz, sa: 0, ex: wx, ez: wz, ea: alt, wx, wz, alt: 0,
+    t: 0, pt: 0, delay: 0, life: dur * .95, col: sideCol(side),
+    sd: (Math.random() * 1e6) | 0, miss: 1, dur, arc: 0, trail: [],
+  });
+}
 function spectPool(forceSide, kind) {
   const ok = e => (e.nat < 0 || e.nat === match[0] || e.nat === match[1]);
   /* 不属于任何一方的奇观两边都可能发动，前置条件得逐边验 */
@@ -1516,19 +1527,38 @@ function refreshAct(force) {
 }
 const SPECTACLE = [
   { nat: 0, name: ['AT-AT advance', 'AT-AT 推进'], kind: 'force', go(side) {
-      for (let i = 0; i < 2; i++)
-        spawn(side, 'tank', side === 0 ? -30 - i * 60 : WORLD_W + 30 + i * 60, .3 + i * .3);
+      /* 两台走过来像巡逻。三台、领头那台是老车组，才是霍斯那个画面 */
+      for (let i = 0; i < 3; i++) {
+        const u = spawn(side, 'tank', side === 0 ? -30 - i * 56 : WORLD_W + 30 + i * 56, .26 + i * .21);
+        u.leave = 36;
+        if (!i) { u.rank = 2; u.ace = 1; u.max = Math.round(u.max * 1.5); u.hp = u.max; }
+      }
     } },
-  { nat: 0, name: ['Orbital bombardment', '轨道轰炸'], kind: 'act', go(side) {
-      /* 从大气层外打下来，没有预警也没得拦 */
-      const c = enemyCentre(side);
-      for (let i = 0; i < 5; i++)
-        setTimeoutShell(i * .5, () => skyFall(side, c[0] + rnd(-150, 150), c[1] + rnd(-110, 110) / DEPTH, 150, 130, 1.5, 900));
+  { nat: 0, name: ['TIE bomber squadron', '钛轰炸机中队'], kind: 'force', go(side) {
+      /* 这一条原来是轨道轰炸：从大气层外打下来，没有预警、没得拦，也没得看
+         —— 画面上就是空地上凭空炸开几片。换成看得见的：一个中队压着场
+         推过去投弹，高炮还能跟它们较量一下 */
+      for (let i = 0; i < 4; i++) {
+        const u = spawn(side, 'bmb', side === 0 ? -40 - i * 55 : WORLD_W + 40 + i * 55, .2 + i * .2);
+        u.rank = 1;
+      }
     } },
   { nat: 1, name: ['Ion cannon', 'V-150 离子炮'], kind: 'act', go(side) {
-      /* 霍斯那门炮：一发把头顶上的东西打瘫 */
-      const c = enemyCentre(side);
-      skyFall(side, c[0], c[1], 260, 210, 1.1, 700);
+      /* 霍斯那门炮就架在基地边上，电影里看得见它转过来开火。原来这条是从天上
+         凭空砸一发 —— 炮没了，只剩一个坑。现在把炮本身放出来：推上位、
+         一道光柱打上去，天上敌方的东西全部瘫掉，然后拖走。
+         它不打地面 —— 这门炮是用来清天上的，地面的活有别人干 */
+      const gx = side === 0 ? rnd(80, 155) : rnd(WORLD_W - 155, WORLD_W - 80);
+      const gz = rnd(.3, .7);
+      const gun = spawn(side, 'sam', gx, gz);
+      gun.boost = 8; gun.leave = 17; gun.ace = 1;
+      setTimeoutShell(3.4, () => {
+        if (gun.hp <= 0) return;                   // 炮先被端了就没有这一发
+        launchTrail(side, gx, gz, 820, 1.1);
+        beep('cannon');
+        for (const v of units)
+          if (v.side !== side && v.hp > 0 && v.d.layer === 'a') { v.hp -= v.max * .62; v.sup = 1.5; }
+      });
     } },
   { nat: 1, name: ['Y-wing run', 'Y 翼轰炸'], kind: 'force', go(side) {
       for (let i = 0; i < 3; i++) {

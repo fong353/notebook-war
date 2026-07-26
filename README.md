@@ -62,14 +62,17 @@ A single HTML file. No build step, no dependencies, no network calls — open it
 - **Pillboxes are yours to draw.** Each side starts with two concrete strongpoints on its forward
   edge: they never move and never withdraw, small arms just ricochet off them, and digging one out
   takes artillery. You can pencil in more at any time.
-- **Set-pieces arrive on their own.** Every minute or so something outsized turns up without you
-  asking: a V-2 that simply lands with no warning and nothing that can intercept it, a V-1 slow
-  enough for the flak to get a shot at, a B-17 formation, a Katyusha battalion. 1918 gets its own —
-  Zeppelin raids, the Paris Gun, a railway gun that rolls on and shells the line, over-the-top
-  waves, a cavalry charge. The Cold War has Warthog runs and Bear flyovers; the galactic setting
-  has AT-ATs striding in and the Hoth ion cannon. Each belongs to one nation, so you only see it
-  when that nation is in the match — and when something rolls out to fire, you see the guns
-  themselves arrive, shoot and withdraw, rather than shells falling out of an empty sky.
+- **Set-pieces arrive on their own, and you can see who is doing it.** Every minute or so something
+  outsized turns up without you asking — and the rule for all of them is that the thing doing the
+  firing is on screen. A V-2 has its erector trailer drive up and the rocket climb away in front of
+  you before anything lands downrange; a B-52 flies in and the cruise missiles drop out of its
+  belly, so shooting the bomber down means those missiles never arrive. Wittmann's three Tigers roll
+  on and roll off again, a Katyusha battalion deploys, fires by ranks and withdraws, a railway gun
+  rides in and shells the line. 1918 gets Zeppelin raids, stormtrooper infiltration, over-the-top
+  waves and a cavalry charge; the Cold War gets Warthog sweeps and guards tank battalions; the
+  galactic setting gets AT-ATs striding in and the Hoth ion cannon — the gun itself, hauled into
+  position, firing a beam that leaves everything airborne crippled. Each belongs to one nation, so
+  you only see it when that nation is in the match.
 - **Commander orders** on cooldowns — air strike, barrage, reinforce, rally, smoke, airdrop, plus a
   mine in 1918 — so you can lean on the battle without micromanaging it. One of them, with no cooldown, stages a
   **set-play** — a one-off action like a charge, a barrage or a V-2. The button is labelled with

@@ -1606,16 +1606,22 @@ function refreshAct(force) {
 
 const SPECTACLE = [
   { nat: 2, name: ['Zeppelin raid', '齐柏林夜袭'], kind:'force', go(side) {
-      for (let i = 0; i < 2; i++) {
-        const u = spawn(side, 'bmb', side === 0 ? -40 - i * 60 : WORLD_W + 40 + i * 60, rnd(.2, .8));
+      /* 两艘飞不出"夜袭"的意思。整个分队铺开压过来才像那么回事 */
+      for (let i = 0; i < 5; i++) {
+        const u = spawn(side, 'bmb', side === 0 ? -40 - i * 58 : WORLD_W + 40 + i * 58, .14 + i * .18);
         u.rank = 1;
       }
     } },
-  { nat: 2, name: ['Paris Gun', '巴黎大炮'], kind:'act', go(side) {
-      const wz = rnd(.12, .88);
-      for (let i = 0; i < 3; i++)
-        setTimeoutShell(i * .9, () => { const c = enemyCentre(side);
-          skyFall(side, c[0] + rnd(-130, 130), c[1] + rnd(-100, 100) / DEPTH, 190, 150, 1.7, 820); });
+  { nat: 2, name: ['Stormtroopers', '暴风突击队'], kind:'act', go(side) {
+      /* 这一条原来是巴黎大炮。那门炮架在 120 公里外，玩家只看得见炮弹凭空
+         落下；而且看点跟已有的列车炮完全重合 —— 列车炮好歹开得上来。
+         换成 1918 年春季攻势的渗透战术：不排横队走过去，小股精锐带着轻机枪
+         找防线的缝钻。跟英军的越顶冲锋摆在一起看，正好是同一个问题的两种答案 */
+      const fwd = side === 0 ? 1 : -1, x0 = side === 0 ? 120 : WORLD_W - 120;
+      for (let i = 0; i < 6; i++) {
+        const u = spawn(side, i % 3 === 2 ? 'mg' : 'inf', x0 - fwd * rnd(0, 34) * K, .17 + i * .13);
+        u.rank = 2; u.boost = 9; u.leave = 30;
+      }
     } },
   { nat: 0, name: ['Railway gun barrage', '列车炮弹幕'], kind: 'act', go(side) {
       /* 把炮本身推上轨道打几发再拖走 —— 这东西的看点就是那门炮 */
