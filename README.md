@@ -51,6 +51,12 @@ A single HTML file. No build step, no dependencies, no network calls — open it
   ammo, and picks between them by expected damage against the current target. A tank uses its coax
   machine gun on infantry and saves the main gun for armour. A fighter fires its wing guns in a
   turning fight because a missile has a minimum range.
+- **Counters are spelled out, not buried in the numbers.** Damage is `power × counter[shell][target]`.
+  Shells come in seven kinds — small arms, autocannon, fragmentation, heavy HE, armour-piercing,
+  flak, siege — and every target is one of four classes: soft, light armour, heavy armour, aircraft.
+  Each kind of shell is bad at something, so nothing answers everything: a rifle bounces off a
+  pillbox, a bazooka is wasted on infantry, an 88 switches shell type between tanks and aircraft.
+  The unit palette shows the whole row (◎ good · poor) so you can see what you are drawing.
 - **Suppression drives the infantry fight.** Fire landing nearby pins men down whether or not it
   hits; pinned infantry crawl for the nearest trench or bunker and stop advancing.
 - **Pillboxes are yours to draw.** Each side starts with two concrete strongpoints on its forward
