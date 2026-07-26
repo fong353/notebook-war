@@ -53,6 +53,9 @@ A single HTML file. No build step, no dependencies, no network calls — open it
   turning fight because a missile has a minimum range.
 - **Suppression drives the infantry fight.** Fire landing nearby pins men down whether or not it
   hits; pinned infantry crawl for the nearest trench or bunker and stop advancing.
+- **Pillboxes are yours to draw.** Each side starts with two concrete strongpoints on its forward
+  edge: they never move and never withdraw, small arms just ricochet off them, and digging one out
+  takes artillery. You can pencil in more at any time.
 - **Set-pieces arrive on their own.** Every minute or so something outsized turns up without you
   asking: a V-2 that simply lands with no warning and nothing that can intercept it, a V-1 slow
   enough for the flak to get a shot at, a B-17 formation, a Katyusha battalion. 1918 gets its own —

@@ -419,6 +419,9 @@ const UNITS = {
   mlrs:  { name:['Rockets','火箭炮'],    sub:['6-round salvo','6发齐射'],        k:'0', m:[['Nebelwerfer 41','烟雾发射器 41'],['T34 Calliope','T34 卡利俄佩'],['BM-13 Katyusha','BM-13 喀秋莎']],     bar:28, sizeM:2.4, layer:'g', hp:92,  spd:7,  armor:1, h:18, w:['mlrsSalvo'],         weight:7 },
   supply:{ name:['Supply','补给车'],     sub:['Unsuppress + reload','解压制·快装填'], k:'u', m:[['Opel Blitz','欧宝闪电'],['GMC CCKW','GMC CCKW'],['ZiS-5 Supply','ZiS-5 补给车']],                   bar:19, sizeM:2.6, layer:'g', hp:80,  spd:20, armor:1, h:16, w:[], hold:250, support:'supply', weight:8 },
   medic: { name:['Medic','卫生兵'],      sub:['Heals wounded','救治伤员'],       k:'i', m:[['Sanitäter','德军卫生兵'],['US Medic','美军医护兵'],['Saninstruktor','卫生指导员']],                       bar:25, sizeM:1.8, layer:'g', hp:36,  spd:24, armor:0, h:22, w:[], hold:190, support:'medic',  weight:8 },
+  /* 碉堡：钉死在地上的混凝土火力点。开局双方阵地里各有几座，也可以自己画上去。
+     不动、不撤、不占增援名额 —— 它是阵地的一部分，不是一支部队 */
+  bunk:  { name:['Pillbox','碉堡'],      sub:['Static · MG nest','固定工事·机枪巢'], k:'b', m:[['Regelbau 58c','Regelbau 58c 碉堡'],['Concrete Pillbox','混凝土碉堡'],['DOT Firing Point','ДОТ 永备火力点']],  bar:22, sizeM:2.2, layer:'g', hp:320, spd:0, armor:2, h:15, w:['hmg','srifle'], static:1, weight:0 },
   rail:  { name:['Siege Gun','攻城炮'], sub:['Reaches anywhere on the map','攻城重炮·打遍全图'], k:'-', bar:34, m:[['80cm Schwerer Gustav','80cm 古斯塔夫'],['240mm M1 Black Dragon','240mm 黑龙'],['203mm B-4','203mm B-4']], sizeM:5.2, layer:'g', hp:190, spd:3, armor:1, h:20, w:['railGun'], hold:560, weight:3 },
   /* Paratroopers drift down under canopy and only fight once they land. weight 0 keeps them
      out of the reinforcement pool, so they never just appear on the ground */
@@ -463,11 +466,12 @@ for (const k in UNITS) {
      · withdraw threshold: support trucks bail first, armour last, aircraft never (they RTB)
      · assault: short-ranged units have to close in; long-ranged ones stay back */
   d.morale = d.armor ? 1.6 : 1;
-  d.grit = d.layer === 'a' ? 0 : (d.support ? .5 : (d.armor ? .2 : .3));
+  /* 工事没有"撤下来整补"这回事：留着 grit 它会血少了就停火装死 */
+  d.grit = (d.layer === 'a' || d.static) ? 0 : (d.support ? .5 : (d.armor ? .2 : .3));
   d.aggr = !!d.aggr;                      // Explicit: only units whose main weapon is short-ranged push in
   if (d.layer === 'a' && !d.wing) d.wing = 'fixed';   // Only rotors may hover
 }
-const GROUND = ['inf','mg','sniper','atgm','tank','ifv','aa','sam','arty','mlrs','supply','medic','para'];
+const GROUND = ['inf','mg','sniper','atgm','tank','ifv','aa','sam','arty','mlrs','supply','medic','para','bunk'];
 const AIR = ['fig','atk','bmb'];
 /* V-1 只由德军奇观投放，不进兵种面板 —— 否则美苏也能手画出 V-1 来 */
 /* 奇观级：超规格的东西单成一类 —— 古斯塔夫这种东西不该和步兵排在一行 */
@@ -660,6 +664,12 @@ function initArmies() {
     spawn(0, k, rnd(20, WORLD_W * .26), rnd(.05, .95));
     spawn(1, k, rnd(WORLD_W * .74, WORLD_W - 20), rnd(.05, .95));
   });
+  /* 双方阵地前沿各摆两座碉堡：开局就有两个啃不动的硬点，进攻方得绕或者叫炮。
+     摆在纵深里没用 —— 实测那样机枪一局都够不着战线，碉堡就是块挨打的水泥 */
+  for (let i = 0; i < 2; i++) {
+    spawn(0, 'bunk', rnd(WORLD_W * .26, WORLD_W * .36), rnd(.12, .88));
+    spawn(1, 'bunk', rnd(WORLD_W * .64, WORLD_W * .74), rnd(.12, .88));
+  }
   /* Map works: trenches spread across the field plus a few bunkers you can garrison. Infantry only */
   works.length = 0;
   for (let i = 0; i < 7; i++)
@@ -882,7 +892,9 @@ function update(dt) {
       reTimer = 1.15;
       const TARGET = FIELD_TARGET;
       let nb = 0, nr = 0;
-      for (const u of units) u.side === 0 ? nb++ : nr++;
+      /* 碉堡不算进这个额度：它是阵地，不是能拉上去顶线的部队。
+         算进去的话画几座碉堡就等于把自己的增援卡死 */
+      for (const u of units) { if (u.d.static) continue; u.side === 0 ? nb++ : nr++; }
       const cap = [nb, nr];
       const pw = [power(0), power(1)];
       const weak = pw[0] <= pw[1] ? 0 : 1;
@@ -1097,7 +1109,8 @@ function update(dt) {
     /* 掉头（固定翼脱离途中保持航向，不许原地扭头） */
     let wantFace = u.face;
     const onRun = u.d.wing === 'fixed' && t && t.d.layer === 'g' && !u.rtb;
-    if (u.rtb || u.mode === 1) wantFace = u.side === 0 ? -1 : 1;
+    if (u.d.static) wantFace = fwd;             // 射孔朝哪边是浇进混凝土里的，不会转
+    else if (u.rtb || u.mode === 1) wantFace = u.side === 0 ? -1 : 1;
     else if (onRun) wantFace = u.face;          // 对地航线自己管朝向，别在这儿扭头
     else if (t && Math.abs(t.wx - u.wx) > 25) wantFace = t.wx > u.wx ? 1 : -1;
     else if (!t) wantFace = fwd;
@@ -1105,17 +1118,19 @@ function update(dt) {
     u.face = wantFace;
     u.turnT = Math.max(0, (u.turnT || 0) - dt);
 
-    /* 别叠成一坨 */
+    /* 别叠成一坨。工事是钉在地上的，位移全算到活动的那一边 */
     for (const v of units) {
       if (v === u || v.hp <= 0 || v.d.layer !== u.d.layer) continue;
       if (u.bunker || v.bunker) continue;          // 碉堡里的别被顶出去
+      if (u.d.static && v.d.static) continue;      // 两座工事各占各的地
       const dx = v.wx - u.wx, dz = (v.wz - u.wz) * DEPTH, da = (v.alt || 0) - (u.alt || 0);
       const md = air ? 78 : 50;      // 单位画大了，间距跟着放开，不然更挤
       if (Math.abs(dx) < md && Math.abs(dz) < md * .8 && Math.abs(da) < 45) {
         const push = (md - Math.abs(dx)) * dt * 1.9 * (dx > 0 ? -1 : 1);
-        u.wx += push; v.wx -= push;
+        const ku = u.d.static ? 0 : (v.d.static ? 2 : 1), kv = v.d.static ? 0 : (u.d.static ? 2 : 1);
+        u.wx += push * ku; v.wx -= push * kv;
         const pz = (md * .8 - Math.abs(dz)) * dt * 1.1 * (dz > 0 ? -1 : 1) / DEPTH;
-        u.wz = clamp(u.wz + pz, .02, .98); v.wz = clamp(v.wz - pz, .02, .98);
+        u.wz = clamp(u.wz + pz * ku, .02, .98); v.wz = clamp(v.wz - pz * kv, .02, .98);
       }
     }
 
@@ -1885,6 +1900,28 @@ const DRAW = {
     ctx.lineWidth *= .9;
     rline(-6.6, -12 + b, -3.4, -12 + b); rline(-5, -13.6 + b, -5, -10.4 + b);
     ctx.lineWidth /= .9;
+  },
+  /* ── 碉堡：收分的混凝土墩子，一条横射孔，机枪管从孔里探出来 ──
+     德军的加个装甲观察罩，苏军照例刷斜线，美军就是块素混凝土 */
+  bunk(u, n) {
+    const w = 12, h = 15, tp = -h * .8;
+    rpoly([[-w, 0], [-w * .88, tp], [w * .88, tp], [w, 0]], true, 2);              // 微收分的厚墙
+    rpoly([[-w * 1.03, tp], [-w * .95, -h], [w * .95, -h], [w * 1.03, tp]], true, 1.5);     // 压在上面的顶板
+    ctx.lineWidth *= 1.5;
+    rline(-w * 1.02, 0, w * 1.02, 0, 1.2);                                         // 地基
+    ctx.lineWidth /= 1.5;
+    ctx.lineWidth *= 2.4;
+    rline(-w * .52, tp * .52, w * .58, tp * .52, 1.1);                             // 射孔
+    ctx.lineWidth /= 2.4;
+    const e = barrel(w * .34, tp * .55, 11, u.aimEl * .3, u.face);                  // 探出来的机枪
+    for (let i = 0; i < 3; i++) {                                                   // 墙根培的土：几笔短斜线
+      const x = w * (.92 + i * .2);
+      rline(-x, 0, -x + 3.4, tp * .17, 1.4); rline(x, 0, x - 3.4, tp * .17, 1.4);
+    }
+    if (n === 0) rcirc(-w * .42, -h - 2.4, 2.4);                                    // 装甲观察罩
+    else if (n === 2) sh(-w * .5, -h * .96, w, h * .2, 3);
+    mark(-w * .06, tp * .18, 2.1, n);
+    if (u.flash > .3) rline(e[0], e[1], e[0] + 8, e[1] - u.aimEl * 2, 3.6);
   },
   /* ── 战斗机：Bf109 方翼尖 / P-51 气泡舱层流翼 / Yak-3 短粗 ── */
   /* V-1: stubby airframe with the pulsejet tube riding on its back */
